@@ -391,13 +391,14 @@ function AiGeneratorForm() {
           </div>
 
           <textarea id="courseFourni" name="courseFourni" value={form.courseFourni} onChange={update}
-            rows={4}
+            rows={form.courseFourni ? 14 : 4}
             placeholder="Collez ici le contenu d'un cours existant, ou importez un PDF/Word ci-dessus..."
             style={{
               width: '100%', padding: '11px 13px', border: '1px solid #dcd9e7',
               borderRadius: 9, background: '#fff', color: '#292642',
               font: 'inherit', fontSize: 14, lineHeight: 1.7,
               resize: 'vertical', outline: 'none',
+              transition: 'height 0.3s ease',
             }}
           />
         </div>

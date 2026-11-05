@@ -149,8 +149,10 @@ function ContentForm({ initial, onSaved, onCancel }) {
               <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx"
                 style={{ display: 'none' }} onChange={handleFileUpload} />
             </div>
-            <textarea name="contenu" value={form.contenu} onChange={update} rows={14}
-              placeholder="Rédigez le contenu ici, importez un PDF/Word ci-dessus, ou laissez vide..." />
+            <textarea name="contenu" value={form.contenu} onChange={update}
+              rows={form.contenu ? 18 : 14}
+              placeholder="Rédigez le contenu ici, importez un PDF/Word ci-dessus, ou laissez vide..."
+              style={{ transition: 'height 0.3s ease' }} />
           </label>
         </div>
 
