@@ -170,9 +170,6 @@ export default function Dashboard() {
           <h1>Tableau de bord</h1>
           <p>Consultez et gérez tous vos contenus pédagogiques au même endroit.</p>
         </div>
-        <Link to="/ai">
-          <button className="workspace-button">✨ Générer avec l'IA</button>
-        </Link>
       </section>
 
       {/* Stats */}
