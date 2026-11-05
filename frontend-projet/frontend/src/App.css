@@ -190,18 +190,17 @@ button {
   font-weight: 700;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 13px 15px;
-
   border: 1px solid #deddea;
   border-radius: 9px;
-
   background: #ffffff;
   color: #292747;
-
   font-size: 15px;
   outline: none;
+  cursor: pointer;
 }
 
 .form-group input:focus {

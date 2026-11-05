@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { contentApi, exportApi } from '../services/api';
@@ -29,8 +29,40 @@ function ContentForm({ initial, onSaved, onCancel }) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [extracting, setExtracting] = useState(false);
+  const [extractedFile, setExtractedFile] = useState('');
+  const fileInputRef = useRef(null);
 
   const update = (e) => setForm((cur) => ({ ...cur, [e.target.name]: e.target.value }));
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtracting(true);
+    setError('');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const token = localStorage.getItem('exocraft_token');
+      const res = await fetch('/api/ai/extract-text', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Erreur extraction');
+      }
+      const data = await res.json();
+      setForm((cur) => ({ ...cur, contenu: data.texte }));
+      setExtractedFile(file.name);
+    } catch (err) {
+      setError("Impossible d'extraire le texte : " + err.message);
+    } finally {
+      setExtracting(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -108,8 +140,31 @@ function ContentForm({ initial, onSaved, onCancel }) {
         <div className="workspace-body-field">
           <label>
             Contenu
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={extracting}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 8,
+                  border: '1.5px dashed #6252ed', background: '#f5f3ff',
+                  color: '#6252ed', fontWeight: 600, fontSize: 12,
+                  cursor: 'pointer', transition: 'all 0.2s',
+                }}
+              >
+                {extracting ? '⏳ Extraction...' : '📎 Importer un PDF ou Word'}
+              </button>
+              {extractedFile && (
+                <span style={{ fontSize: 12, color: '#00b894', fontWeight: 600 }}>
+                  ✓ {extractedFile}
+                </span>
+              )}
+              <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx"
+                style={{ display: 'none' }} onChange={handleFileUpload} />
+            </div>
             <textarea name="contenu" value={form.contenu} onChange={update} rows={14}
-              placeholder="Rédigez le contenu ici, ou laissez vide pour le compléter plus tard..." />
+              placeholder="Rédigez le contenu ici, importez un PDF/Word ci-dessus, ou laissez vide..." />
           </label>
         </div>
 

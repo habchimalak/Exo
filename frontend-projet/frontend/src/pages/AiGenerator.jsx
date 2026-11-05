@@ -182,8 +182,41 @@ function AiGeneratorForm() {
   const [saving, setSaving]       = useState(false);
   const [error, setError]         = useState("");
   const [success, setSuccess]     = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [extractedFileName, setExtractedFileName] = useState("");
+  const fileInputRef = useRef(null);
 
   const update = (e) => setForm((cur) => ({ ...cur, [e.target.name]: e.target.value }));
+
+  // Upload et extraction de texte depuis PDF/Word
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExtracting(true);
+    setError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const token = localStorage.getItem("exocraft_token");
+      const res = await fetch("/api/ai/extract-text", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: fd,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Erreur extraction");
+      }
+      const data = await res.json();
+      setForm((cur) => ({ ...cur, courseFourni: data.texte }));
+      setExtractedFileName(file.name);
+    } catch (err) {
+      setError("Impossible d'extraire le texte : " + err.message);
+    } finally {
+      setExtracting(false);
+      e.target.value = "";
+    }
+  };
 
   // Génération
   const handleGenerate = async (e) => {
@@ -295,7 +328,12 @@ function AiGeneratorForm() {
             </div>
             <div className="form-group">
               <label htmlFor="niveau">Niveau</label>
-              <select id="niveau" name="niveau" value={form.niveau} onChange={update}>
+              <select id="niveau" name="niveau" value={form.niveau} onChange={update} style={{
+                width: '100%', padding: '13px 15px', border: '1.5px solid #e2e0ed',
+                borderRadius: 10, fontSize: 14, background: '#fcfcff',
+                color: '#1a1730', outline: 'none', cursor: 'pointer',
+                transition: 'border-color .2s ease, box-shadow .2s ease',
+              }}>
                 {NIVEAUX.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
               </select>
             </div>
@@ -321,8 +359,39 @@ function AiGeneratorForm() {
           <label htmlFor="courseFourni">
             Cours existant <small>(optionnel — si vide, l'IA génère depuis le thème)</small>
           </label>
+
+          {/* Bouton upload PDF/Word */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={extracting}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 8, border: '1.5px dashed #6252ed',
+                background: '#f5f3ff', color: '#6252ed', fontWeight: 600,
+                fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
+              }}
+            >
+              {extracting ? "⏳ Extraction..." : "📎 Importer un PDF ou Word"}
+            </button>
+            {extractedFileName && (
+              <span style={{ fontSize: 12, color: '#00b894', fontWeight: 600 }}>
+                ✓ {extractedFileName}
+              </span>
+            )}
+            {form.courseFourni && !extractedFileName && null}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+          </div>
+
           <textarea id="courseFourni" name="courseFourni" value={form.courseFourni} onChange={update}
-            rows={4} placeholder="Collez ici le contenu d'un cours existant pour que l'IA s'en inspire..." />
+            rows={4} placeholder="Collez ici le contenu d'un cours existant, ou importez un PDF/Word ci-dessus..." />
         </div>
 
         {error && <p className="workspace-error" role="alert">{error}</p>}

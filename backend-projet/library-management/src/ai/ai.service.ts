@@ -1,6 +1,8 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import * as mammoth from 'mammoth';
+import { extname } from 'path';
 import { GenerateContentDto, ContentType } from './dto/generate-content.dto.js';
 import { SaveGeneratedDto } from './dto/save-generated.dto.js';
 import { GeneratedContent } from './entities/generated-content.entity.js';
@@ -222,8 +224,38 @@ Si on te demande de générer du contenu pédagogique, tu le fais directement.`,
   }
 
   // ─────────────────────────────────────────────────────
-  // CONSTRUCTION DES PROMPTS
+  // EXTRACTION TEXTE DEPUIS PDF / WORD
   // ─────────────────────────────────────────────────────
+
+  async extractTextFromFile(file: Express.Multer.File): Promise<{ texte: string; nom: string }> {
+    const ext = extname(file.originalname).toLowerCase();
+    const allowed = ['.pdf', '.doc', '.docx'];
+    if (!allowed.includes(ext)) {
+      throw new BadRequestException('Seuls les fichiers PDF et Word (.doc, .docx) sont acceptés');
+    }
+
+    let texte = '';
+    try {
+      if (ext === '.pdf') {
+        const { createRequire } = await import('module');
+        const require = createRequire(import.meta.url);
+        const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
+        const data = await pdfParse(file.buffer);
+        texte = data.text?.trim() ?? '';
+      } else {
+        const result = await mammoth.extractRawText({ buffer: file.buffer });
+        texte = result.value?.trim() ?? '';
+      }
+    } catch {
+      throw new BadRequestException('Impossible d\'extraire le texte de ce fichier.');
+    }
+
+    if (!texte) {
+      throw new BadRequestException('Le fichier semble vide ou illisible.');
+    }
+
+    return { texte: texte.substring(0, 8000), nom: file.originalname };
+  }
 
   private buildPrompt(dto: GenerateContentDto): string {
     const base = dto.courseFourni

@@ -7,15 +7,39 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { AiService } from './ai.service.js';
 import { GenerateContentDto } from './dto/generate-content.dto.js';
 import { SaveGeneratedDto } from './dto/save-generated.dto.js';
 import { ChatDto } from './dto/chat.dto.js';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
+import { Public } from '../auth/decorators/public.decorator.js';
 @Controller('ai')
 export class AiController {
   constructor(private readonly aiService: AiService) {}
+
+  // ─────────────────────────────────────────────────────
+  // POST /ai/extract-text
+  // Extrait le texte d'un fichier PDF ou Word uploadé
+  // Utilisé par le frontend pour pré-remplir "Cours existant"
+  // ─────────────────────────────────────────────────────
+  @Post('extract-text')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  async extractText(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('Aucun fichier fourni');
+    return this.aiService.extractTextFromFile(file);
+  }
 
   // ─────────────────────────────────────────────────────
   // POST /ai/chat
