@@ -914,7 +914,7 @@ export default function QuizManager() {
                     {syncResults.resultats.map((r, i) => (
                       <tr key={r.id ?? i} style={{ borderBottom: '1px solid #f0eeff' }}>
                         <td style={{ padding: '8px 12px' }}>{r.nom}</td>
-                        <td style={{ padding: '8px 12px' }}>{r.prenom}</td>
+                        <td style={{ padding: '8px 12px' }}>{r.matricule ?? r.prenom}</td>
                         <td style={{ padding: '8px 12px', textAlign: 'center' }}>{r.score}/{r.total}</td>
                         <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: r.note >= 10 ? '#1e8e3e' : '#d93025' }}>{r.note}</td>
                       </tr>

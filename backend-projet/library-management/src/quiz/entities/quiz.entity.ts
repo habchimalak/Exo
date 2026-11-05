@@ -23,12 +23,16 @@ export class Quiz {
   googleFormId?: string;
   googleFormUrl?: string;
   googleFormResponderUri?: string;
+  // Item IDs for reliable answer extraction during sync
+  googleNomItemId?: string;
+  googleMatriculeItemId?: string;
 }
 
 export class QuizResultat {
   id: number;
   nom: string;
   prenom: string;
+  matricule?: string;   // student matricule (Google Forms sync path)
   score: number;        // nombre de bonnes réponses
   total: number;        // nombre total de questions
   note: number;         // note sur 20

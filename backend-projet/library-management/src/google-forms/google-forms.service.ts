@@ -96,7 +96,7 @@ export class GoogleFormsService {
         },
       });
 
-      // b) Add "Nom complet" text field
+      // b) Add "Nom" text field
       requests.push({
         createItem: {
           item: {
@@ -163,24 +163,46 @@ export class GoogleFormsService {
         });
       });
 
-      await forms.forms.batchUpdate({
+      const batchResponse = await forms.forms.batchUpdate({
         formId,
         requestBody: { requests },
       });
 
-      // 3. Fetch the form to get responderUri
-      const formData = await forms.forms.get({ formId });
-      const responderUri = formData.data.responderUri ?? `https://docs.google.com/forms/d/${formId}/viewform`;
+      // 3. Extract item IDs for Nom (index 0) and Matricule (index 1) from batchUpdate replies
+      //    Each createItem reply carries the newly-assigned questionId — use it for reliable answer extraction.
+      const replies: any[] = batchResponse.data.replies ?? [];
+      // replies[0] = updateSettings (no questionId)
+      // replies[1] = createItem Nom
+      // replies[2] = createItem Matricule
+      const nomItemId: string | undefined =
+        replies[1]?.createItem?.item?.questionItem?.question?.questionId;
+      const matriculeItemId: string | undefined =
+        replies[2]?.createItem?.item?.questionItem?.question?.questionId;
 
-      // 4. Persist on quiz object
+      // 4. Fetch the form to get responderUri (and resolve item IDs if batchUpdate didn't return them)
+      const formData = await forms.forms.get({ formId });
+      const responderUri =
+        formData.data.responderUri ??
+        `https://docs.google.com/forms/d/${formId}/viewform`;
+
+      // If batchUpdate didn't return IDs, fall back to items array from forms.get
+      const resolvedNomId =
+        nomItemId ??
+        formData.data.items?.[0]?.questionItem?.question?.questionId;
+      const resolvedMatriculeId =
+        matriculeItemId ??
+        formData.data.items?.[1]?.questionItem?.question?.questionId;
+
+      // 5. Persist on quiz object
       quiz.googleFormId = formId;
       quiz.googleFormUrl = responderUri;
       quiz.googleFormResponderUri = responderUri;
+      if (resolvedNomId) quiz.googleNomItemId = resolvedNomId;
+      if (resolvedMatriculeId) quiz.googleMatriculeItemId = resolvedMatriculeId;
 
       return { lien: responderUri, formId };
     } catch (err: any) {
       this.mapGoogleError(err);
-      throw err; // unreachable, but satisfies TS
     }
   }
 
@@ -226,34 +248,50 @@ export class GoogleFormsService {
 
         // Deduplicate by responseId
         const alreadyExists = quiz.resultats.some(
-          (r: QuizResultat & { googleResponseId?: string }) =>
-            r.googleResponseId === responseId,
+          (r: QuizResultat) => r.googleResponseId === responseId,
         );
         if (alreadyExists) continue;
 
-        // Extract answers — keys are item IDs; we rely on order
         const answers = response.answers ?? {};
-        const answerValues = Object.values(answers) as any[];
 
-        // First text answer = Nom, second = Matricule
-        const textAnswers = answerValues.filter(
-          (a: any) => a.textAnswers?.answers?.[0]?.value !== undefined,
-        );
-        const nom = textAnswers[0]?.textAnswers?.answers?.[0]?.value ?? '';
-        const matricule = textAnswers[1]?.textAnswers?.answers?.[0]?.value ?? '';
+        // Extract Nom and Matricule by their known item IDs (stored during export).
+        // This is safe regardless of JS object key insertion order.
+        let nom = '';
+        let matricule = '';
+
+        if (quiz.googleNomItemId && answers[quiz.googleNomItemId]) {
+          nom =
+            answers[quiz.googleNomItemId].textAnswers?.answers?.[0]?.value ?? '';
+        }
+        if (quiz.googleMatriculeItemId && answers[quiz.googleMatriculeItemId]) {
+          matricule =
+            answers[quiz.googleMatriculeItemId].textAnswers?.answers?.[0]
+              ?.value ?? '';
+        }
+
+        // Fallback: if item IDs were not stored (old exports), use positional order
+        if (!nom && !matricule) {
+          const answerValues = Object.values(answers) as any[];
+          const textAnswers = answerValues.filter(
+            (a: any) => a.textAnswers?.answers?.[0]?.value !== undefined,
+          );
+          nom = textAnswers[0]?.textAnswers?.answers?.[0]?.value ?? '';
+          matricule = textAnswers[1]?.textAnswers?.answers?.[0]?.value ?? '';
+        }
 
         const totalScore: number = response.totalScore ?? 0;
-        const note = maxScore > 0
-          ? Math.round((totalScore / maxScore) * 20 * 100) / 100
-          : 0;
-        const pourcentage = maxScore > 0
-          ? Math.round((totalScore / maxScore) * 100)
-          : 0;
+        const note =
+          maxScore > 0
+            ? Math.round((totalScore / maxScore) * 20 * 100) / 100
+            : 0;
+        const pourcentage =
+          maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
-        const resultat: QuizResultat & { googleResponseId?: string } = {
+        const resultat: QuizResultat = {
           id: (quiz.resultats.length) + 1,
           nom,
-          prenom: matricule, // using prenom field to carry matricule value
+          prenom: '',           // unused on the Google Forms sync path
+          matricule,            // dedicated field — avoids semantic collision with prenom
           score: totalScore,
           total: maxScore,
           note,
@@ -269,7 +307,6 @@ export class GoogleFormsService {
       return { resultats: quiz.resultats };
     } catch (err: any) {
       this.mapGoogleError(err);
-      throw err;
     }
   }
 
