@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { quizApi, exportApi } from '../services/api';
+import useMatieres from '../hooks/useMatieres';
 
 // ── Inline question form ─────────────────────────────────────────────────────
 function QuestionForm({ quizId, initial, onSaved, onCancel }) {
@@ -115,11 +116,14 @@ const EXERCISE_TYPES = [
 
 function QuizForm({ initial, onSaved, onCancel }) {
   const { user } = useAuth();
+  const { matieres: mesMatieres, promos: mesPromos } = useMatieres();
 
-  // Construire la liste des classes depuis les associations de l'utilisateur
-  const classeOptions = user?.associations?.length
-    ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
-    : [];
+  // Fallback sur les associations localStorage si le hook n'a pas encore chargé
+  const classeOptions = mesPromos.length > 0
+    ? mesPromos
+    : user?.associations?.length
+      ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
+      : [];
 
   const [form, setForm] = useState(
     initial || { titre: '', theme: initial?.theme || (classeOptions[0] ?? ''), matiere: '', classe: initial?.theme || (classeOptions[0] ?? ''), type: 'quiz', niveau: 'intermediaire', visibilite: 'prive' }
@@ -186,12 +190,20 @@ function QuizForm({ initial, onSaved, onCancel }) {
           </label>
           <label>
             Matière *
-            <input name="matiere" value={form.matiere} onChange={update} placeholder="Ex : Mathématiques" required />
+            {mesMatieres.length > 0 ? (
+              <select name="matiere" value={form.matiere} onChange={update} required>
+                <option value="">— Choisir une matière —</option>
+                {mesMatieres.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            ) : (
+              <input name="matiere" value={form.matiere} onChange={update} placeholder="Ex : Mathématiques" required />
+            )}
           </label>
           <label>
             Classe *
             {classeOptions.length > 0 ? (
               <select name="classe" value={form.classe} onChange={update} required>
+                <option value="">— Choisir une classe —</option>
                 {classeOptions.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}

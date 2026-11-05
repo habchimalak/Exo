@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth, defaultGroups } from "../context/AuthContext";
 import { aiApi, exportApi } from "../services/api";
+import useMatieres from "../hooks/useMatieres";
 
 const CONTENT_TYPES = [
   { value: "quiz",   label: "Quiz",              icon: "☑" },
@@ -170,11 +171,12 @@ function ExportPanel({ form, editedContent }) {
 function AiGeneratorForm() {
   const [searchParams] = useSearchParams();
   const archiveId = searchParams.get('archiveId');
+  const { matieres: mesMatieres, promos: mesPromos } = useMatieres();
 
   const [form, setForm] = useState({
     type: "quiz", matiere: "", theme: "", courseFourni: "",
     nombreQuestions: 5, niveau: "intermediaire",
-    duree: "2 heures", bareme: "20 points",
+    duree: "2 heures", bareme: "20 points", classe: "",
   });
   const [generated, setGenerated] = useState("");
   const [editedContent, setEdited] = useState("");
@@ -304,12 +306,26 @@ function AiGeneratorForm() {
           ))}
         </div>
 
-        {/* Matière + Thème */}
+        {/* Matière + Thème + Classe */}
         <div className="ai-form-grid">
           <div className="form-group">
             <label htmlFor="matiere">Matière *</label>
-            <input id="matiere" name="matiere" value={form.matiere} onChange={update}
-              placeholder="Ex: Informatique, Mathématiques..." required />
+            {mesMatieres.length > 0 ? (
+              <select id="matiere" name="matiere" value={form.matiere} onChange={update} required
+                style={{
+                  width: '100%', padding: '11px 13px', border: '1px solid #dcd9e7',
+                  borderRadius: 9, background: '#fff', color: form.matiere ? '#292642' : '#aaa8b7',
+                  font: 'inherit', fontSize: 14, outline: 'none', cursor: 'pointer',
+                }}>
+                <option value="">— Choisir une matière —</option>
+                {mesMatieres.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            ) : (
+              <input id="matiere" name="matiere" value={form.matiere} onChange={update}
+                placeholder="Ex: Informatique, Mathématiques..." required />
+            )}
           </div>
           <div className="form-group">
             <label htmlFor="theme">Thème *</label>
@@ -317,6 +333,26 @@ function AiGeneratorForm() {
               placeholder="Ex: Les algorithmes de tri..." required />
           </div>
         </div>
+
+        {/* Classe associée */}
+        {mesPromos.length > 0 && (
+          <div className="form-group">
+            <label htmlFor="classe">
+              Classe <small style={{ fontWeight: 400, color: '#aaa8b7' }}>(optionnel)</small>
+            </label>
+            <select id="classe" name="classe" value={form.classe} onChange={update}
+              style={{
+                width: '100%', padding: '11px 13px', border: '1px solid #dcd9e7',
+                borderRadius: 9, background: '#fff', color: form.classe ? '#292642' : '#aaa8b7',
+                font: 'inherit', fontSize: 14, outline: 'none', cursor: 'pointer',
+              }}>
+              <option value="">— Choisir une classe —</option>
+              {mesPromos.map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Paramètres quiz */}
         {form.type === "quiz" && (

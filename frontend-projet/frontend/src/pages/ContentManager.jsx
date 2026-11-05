@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { contentApi, exportApi } from '../services/api';
+import useMatieres from '../hooks/useMatieres';
 
 const CONTENT_TYPES = [
   { value: '', label: 'Tous les types' },
@@ -17,6 +18,7 @@ const COURSE_TYPES = [
 // ── Formulaire création / édition ─────────────────────────────────────────────
 function ContentForm({ initial, onSaved, onCancel }) {
   const { user } = useAuth();
+  const { matieres: mesMatieres, promos: mesPromos } = useMatieres();
 
   const classeOptions = user?.associations?.length
     ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
@@ -115,11 +117,23 @@ function ContentForm({ initial, onSaved, onCancel }) {
           </label>
           <label>
             Matière *
-            <input name="matiere" value={form.matiere} onChange={update} placeholder="Ex : Informatique" required />
+            {mesMatieres.length > 0 ? (
+              <select name="matiere" value={form.matiere} onChange={update} required>
+                <option value="">— Choisir une matière —</option>
+                {mesMatieres.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            ) : (
+              <input name="matiere" value={form.matiere} onChange={update} placeholder="Ex : Informatique" required />
+            )}
           </label>
           <label>
             Classe *
-            {classeOptions.length > 0 ? (
+            {mesPromos.length > 0 ? (
+              <select name="classe" value={form.classe} onChange={update} required>
+                <option value="">— Choisir une classe —</option>
+                {mesPromos.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            ) : classeOptions.length > 0 ? (
               <select name="classe" value={form.classe} onChange={update} required>
                 {classeOptions.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>

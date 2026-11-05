@@ -46,6 +46,22 @@ export class AuthController {
     return safe;
   }
 
+  // GET /auth/me/matieres — retourne les matières et promos associées au prof connecté
+  @UseGuards(JwtAuthGuard)
+  @Get('me/matieres')
+  getMesMatieres(@CurrentUser() currentUser: { sub: number }) {
+    const user = this.userService.findOne(currentUser.sub);
+    if (!user) throw new UnauthorizedException('Utilisateur introuvable');
+    const associations = user.associations ?? [];
+    const matieres: string[] = [...new Set(
+      associations.map((a: any) => a.className).filter(Boolean)
+    )];
+    const promos: string[] = [...new Set(
+      associations.map((a: any) => a.section).filter(Boolean)
+    )];
+    return { matieres, promos };
+  }
+
   // PATCH /auth/password — changer son mot de passe
   @UseGuards(JwtAuthGuard)
   @Patch('password')
