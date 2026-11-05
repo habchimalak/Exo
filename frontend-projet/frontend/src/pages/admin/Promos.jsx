@@ -40,11 +40,14 @@ function PromoForm({ form, setForm, etabType }) {
       const next = { ...prev, [field]: value }
       // Régénérer le code automatiquement
       if (['niveau', 'specialite', 'classe'].includes(field)) {
-        next.code = genCode(
+        const newCode = genCode(
           field === 'niveau'    ? value : next.niveau,
           field === 'specialite'? value : next.specialite,
           field === 'classe'    ? value : next.classe,
         )
+        next.code = newCode
+        // Le nom = le code généré
+        next.nom = newCode
       }
       return next
     })
@@ -81,14 +84,6 @@ function PromoForm({ form, setForm, etabType }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-      {/* Nom complet */}
-      <div className="form-group">
-        <label className="form-label">Nom complet</label>
-        <input className="input" value={form.nom}
-          onChange={e => setForm(prev => ({ ...prev, nom: e.target.value }))}
-          placeholder="Ex: 4ème année — Cloud Computing" />
-      </div>
 
       {/* Type */}
       <div className="form-group">
@@ -243,14 +238,14 @@ export default function Promos() {
 
   function openCreate() {
     setEditItem(null)
-    setForm({ nom: '', code: 'ING-4-GEN', niveau: '4eme', type: 'cycle_ing', specialite: '', semestre: 'S1', classe: '' })
+    setForm({ nom: 'ING-4-GEN', code: 'ING-4-GEN', niveau: '4eme', type: 'cycle_ing', specialite: '', semestre: 'S1', classe: '' })
     setAlertMsg('')
     setShowModal(true)
   }
 
   function openEdit(p) {
     setEditItem(p)
-    setForm({ nom: p.nom, code: p.code, niveau: p.niveau, type: p.type, specialite: p.specialite ?? '', semestre: p.semestre, classe: p.classe || '' })
+    setForm({ nom: p.code || p.nom, code: p.code, niveau: p.niveau, type: p.type, specialite: p.specialite ?? '', semestre: p.semestre, classe: p.classe || '' })
     setAlertMsg('')
     setShowModal(true)
   }
