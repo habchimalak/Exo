@@ -455,6 +455,10 @@ function QuizEdit({ quizId, onBack, onSaved }) {
 export default function QuizManager() {
   const { user } = useAuth();
 
+  const classeOptions = user?.associations?.length
+    ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
+    : [];
+
   const [panel, setPanel] = useState(null); // null | 'detail' | 'create' | 'edit'
   const [selectedId, setSelectedId] = useState(null);
   const [editInitial, setEditInitial] = useState(null);
@@ -463,7 +467,7 @@ export default function QuizManager() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [matiere, setMatiere] = useState('');
-  const [statut, setStatut] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const [classeFilter, setClasseFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -483,6 +487,10 @@ export default function QuizManager() {
         data = data.filter((q) =>
           q.theme?.toLowerCase().includes(classeFilter.toLowerCase())
         );
+      }
+      // Filtre type côté client
+      if (typeFilter) {
+        data = data.filter((q) => q.type === typeFilter);
       }
       setQuizList(data);
       setTotal(result.total ?? 0);
@@ -572,7 +580,7 @@ export default function QuizManager() {
 
       {panel === null && (
         <>
-          {/* Filters */}
+          {/* Filtres — identiques à Mes Cours */}
           <div className="workspace-filters">
             <label>
               Matière
@@ -584,13 +592,31 @@ export default function QuizManager() {
               />
             </label>
             <label>
+              Type
+              <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}>
+                <option value="">Tous les types</option>
+                <option value="quiz">Quiz</option>
+                <option value="serie">Série d'exercices</option>
+                <option value="examen">Examen</option>
+              </select>
+            </label>
+            <label>
               Classe
-              <input
-                type="text"
-                value={classeFilter}
-                onChange={(e) => { setClasseFilter(e.target.value); setPage(1); }}
-                placeholder="Filtrer par classe..."
-              />
+              {classeOptions.length > 0 ? (
+                <select value={classeFilter} onChange={(e) => { setClasseFilter(e.target.value); setPage(1); }}>
+                  <option value="">Toutes les classes</option>
+                  {classeOptions.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={classeFilter}
+                  onChange={(e) => { setClasseFilter(e.target.value); setPage(1); }}
+                  placeholder="Filtrer par classe..."
+                />
+              )}
             </label>
           </div>
 
