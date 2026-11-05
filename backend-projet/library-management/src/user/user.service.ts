@@ -33,6 +33,7 @@ export class UserService {
       associations: data.associations || [],
     };
     this.users.push(newUser);
+    Persist.save();
     return newUser;
   }
 
@@ -52,6 +53,7 @@ export class UserService {
     const user = this.findOne(id);
     if (!user) return null;
     Object.assign(user, updateUserDto);
+    Persist.save();
     return user;
   }
 
@@ -59,6 +61,7 @@ export class UserService {
     const index = this.users.findIndex((user) => user.id === id);
     if (index === -1) return null;
     const [removed] = this.users.splice(index, 1);
+    Persist.save();
     return removed;
   }
 }

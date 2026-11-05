@@ -45,6 +45,7 @@ export class QuizService {
       archived: false,
     };
     this.quizzes.push(newQuiz);
+    Persist.save();
     return newQuiz;
   }
 
@@ -63,6 +64,7 @@ export class QuizService {
   update(id: number, updateQuizDto: UpdateQuizDto): Quiz {
     const quiz = this.findOne(id);
     Object.assign(quiz, updateQuizDto);
+    Persist.save();
     return quiz;
   }
 
@@ -72,6 +74,7 @@ export class QuizService {
       throw new NotFoundException(`Quiz avec l'id ${id} introuvable`);
     }
     const [removed] = this.quizzes.splice(index, 1);
+    Persist.save();
     return removed;
   }
 

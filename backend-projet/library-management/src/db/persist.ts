@@ -1,13 +1,8 @@
 /**
  * Persist — Persistance JSON simple pour le stockage en mémoire
  *
- * Usage dans un service :
- *   constructor() {
- *     Persist.register('users', () => this.users, (v) => this.users = v)
- *   }
- *
- * Les données sont sauvegardées automatiquement dans db/data.json
- * toutes les 10 secondes, et rechargées au démarrage.
+ * Sauvegarde automatiquement à chaque mutation (push/splice/Object.assign)
+ * via un debounce de 500ms + sauvegarde immédiate à l'arrêt.
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -22,20 +17,24 @@ const DB_DIR = join(process.cwd(), 'db');
 const DB_FILE = join(DB_DIR, 'data.json');
 
 const registry = new Map<string, Entry>();
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Debounce : sauvegarde 500ms après la dernière modification
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    Persist.saveAll();
+  }, 500);
+}
 
 export const Persist = {
-  /**
-   * Enregistre une collection pour qu'elle soit persistée.
-   * À appeler dans le constructeur du service.
-   */
+  /** Enregistre une collection — appeler dans le constructeur du service */
   register(key: string, get: () => any, set: (v: any) => void) {
     registry.set(key, { get, set });
   },
 
-  /**
-   * Charge toutes les collections depuis le fichier JSON.
-   * À appeler au démarrage de l'application (dans main.ts).
-   */
+  /** Charge toutes les collections depuis le fichier JSON — appeler au démarrage */
   loadAll() {
     if (!existsSync(DB_FILE)) return;
     try {
@@ -51,15 +50,11 @@ export const Persist = {
     }
   },
 
-  /**
-   * Sauvegarde toutes les collections dans le fichier JSON.
-   */
+  /** Sauvegarde immédiate de toutes les collections */
   saveAll() {
     if (registry.size === 0) return;
     try {
-      if (!existsSync(DB_DIR)) {
-        mkdirSync(DB_DIR, { recursive: true });
-      }
+      if (!existsSync(DB_DIR)) mkdirSync(DB_DIR, { recursive: true });
       const data: Record<string, any> = {};
       for (const [key, { get }] of registry) {
         data[key] = get();
@@ -69,7 +64,18 @@ export const Persist = {
       console.error('Erreur sauvegarde données:', err);
     }
   },
+
+  /** Sauvegarde avec debounce — appeler après chaque modification */
+  save() {
+    scheduleSave();
+  },
 };
 
-// Auto-save toutes les 10 secondes
-setInterval(() => Persist.saveAll(), 10_000);
+// Auto-save toutes les 5 secondes (filet de sécurité)
+setInterval(() => Persist.saveAll(), 5_000);
+
+// Sauvegarde immédiate à l'arrêt
+process.on('SIGINT',  () => { if (saveTimer) clearTimeout(saveTimer); Persist.saveAll(); process.exit(0); });
+process.on('SIGTERM', () => { if (saveTimer) clearTimeout(saveTimer); Persist.saveAll(); process.exit(0); });
+process.on('exit',    () => { Persist.saveAll(); });
+process.on('uncaughtException', (err) => { console.error('Erreur non gérée:', err); Persist.saveAll(); process.exit(1); });

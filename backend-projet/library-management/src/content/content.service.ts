@@ -42,6 +42,7 @@ export class ContentService {
       archived: false,
     };
     this.contents.push(newContent);
+    Persist.save();
     return newContent;
   }
 
@@ -106,6 +107,7 @@ export class ContentService {
     const content = this.findOne(id);
     this.checkOwnership(content, auteurId);
     Object.assign(content, dto, { dateModification: new Date() });
+    Persist.save();
     return content;
   }
 
@@ -114,6 +116,7 @@ export class ContentService {
     this.checkOwnership(content, auteurId);
     const index = this.contents.findIndex((c) => c.id === id);
     const [removed] = this.contents.splice(index, 1);
+    Persist.save();
     return removed;
   }
 
@@ -129,6 +132,7 @@ export class ContentService {
     }
     content.statut = 'valide';
     content.dateModification = new Date();
+    Persist.save();
     return content;
   }
 
@@ -167,6 +171,7 @@ export class ContentService {
       titre: `[Copie] ${original.titre}`,
     };
     this.contents.push(copie);
+    Persist.save();
     return copie;
   }
 
@@ -180,6 +185,7 @@ export class ContentService {
     content.archived = true;
     content.archivedAt = new Date();
     content.dateModification = new Date();
+    Persist.save();
     return content;
   }
 
@@ -189,6 +195,7 @@ export class ContentService {
     content.archived = false;
     content.archivedAt = undefined;
     content.dateModification = new Date();
+    Persist.save();
     return content;
   }
 

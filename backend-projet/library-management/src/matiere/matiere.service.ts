@@ -37,6 +37,7 @@ export class MatiereService {
     };
 
     this.matieres.push(newMatiere);
+    Persist.save();
     return newMatiere;
   }
 
@@ -67,6 +68,7 @@ export class MatiereService {
     }
 
     Object.assign(matiere, updateMatiereDto);
+    Persist.save();
     return matiere;
   }
 

@@ -30,6 +30,7 @@ export class PromotionService {
       description:       dto.description       ?? '',
     };
     this.promotions.push(newPromotion);
+    Persist.save();
     return newPromotion;
   }
 
@@ -48,6 +49,7 @@ export class PromotionService {
   update(id: number, dto: UpdatePromotionDto): Promotion {
     const promotion = this.findOne(id);
     Object.assign(promotion, dto);
+    Persist.save();
     return promotion;
   }
 
