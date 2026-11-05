@@ -98,10 +98,6 @@ function PromoForm({ form, setForm, etabType }) {
           <option value="licence">Licence</option>
           <option value="cycle_ing">Cycle Ingénieur</option>
           <option value="master">Master</option>
-          <option value="specialite">Spécialité</option>
-          <option value="prepa">Prépa</option>
-          <option value="branche_commune">Branche commune</option>
-          <option value="general">Général</option>
         </select>
       </div>
 
