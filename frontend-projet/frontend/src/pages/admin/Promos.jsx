@@ -76,8 +76,8 @@ function PromoForm({ form, setForm, etabType }) {
         { value: '5eme', label: '5ème année' },
       ]
 
-  // Afficher la spécialité uniquement si niveau 4ème ou 5ème (spécialité)
-  const showSpec = form.type === 'specialite'
+  // Spécialité toujours visible
+  const showSpec = true
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -123,10 +123,13 @@ function PromoForm({ form, setForm, etabType }) {
         </select>
       </div>
 
-      {/* Spécialité — visible si type = spécialité */}
+      {/* Spécialité — toujours visible, optionnelle */}
       {showSpec && (
         <div className="form-group">
-          <label className="form-label">Spécialité</label>
+          <label className="form-label">
+            Spécialité
+            <span style={{ fontSize: 11, color: '#9090b0', fontWeight: 400, marginLeft: 6 }}>(optionnelle)</span>
+          </label>
           <select className="input" value={form.specialite || ''}
             onChange={e => {
               if (e.target.value === '__new__') { setShowAddSpec(true); return }
@@ -240,7 +243,7 @@ export default function Promos() {
 
   function openCreate() {
     setEditItem(null)
-    setForm({ nom: '', code: 'ING-4-GEN', niveau: '4eme', type: 'specialite', specialite: '', semestre: 'S1', classe: '' })
+    setForm({ nom: '', code: 'ING-4-GEN', niveau: '4eme', type: 'cycle_ing', specialite: '', semestre: 'S1', classe: '' })
     setAlertMsg('')
     setShowModal(true)
   }
