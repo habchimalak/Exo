@@ -17,6 +17,7 @@ import { AssociationsModule } from './associations/associations.module.js';
 import { ProfileModule } from './profile/profile.module.js';
 import { NotesModule } from './notes/notes.module.js';
 import { GenerationsModule } from './generations/generations.module.js';
+import { GoogleFormsModule } from './google-forms/google-forms.module.js';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { GenerationsModule } from './generations/generations.module.js';
     ProfileModule,
     NotesModule,
     GenerationsModule,
+    GoogleFormsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

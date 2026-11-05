@@ -19,6 +19,10 @@ export class Quiz {
   // Partage public
   shareToken?: string;
   resultats?: QuizResultat[];
+  // Google Forms integration
+  googleFormId?: string;
+  googleFormUrl?: string;
+  googleFormResponderUri?: string;
 }
 
 export class QuizResultat {
@@ -31,4 +35,5 @@ export class QuizResultat {
   pourcentage: number;
   date: Date;
   reponses: { questionId: number; choix: string; correct: boolean }[];
+  googleResponseId?: string; // deduplication for Google Forms sync
 }

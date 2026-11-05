@@ -3,6 +3,7 @@ import DashboardLayout from '../components/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { quizApi, exportApi } from '../services/api';
 import useMatieres from '../hooks/useMatieres';
+import { googleFormsApi } from '../services/googleFormsApi.js';
 
 // ── Inline question form ─────────────────────────────────────────────────────
 function QuestionForm({ quizId, initial, onSaved, onCancel }) {
@@ -493,6 +494,12 @@ export default function QuizManager() {
   const [lienPartage, setLienPartage] = useState('');
   const [showLienModal, setShowLienModal] = useState(false);
 
+  // ── Google Forms state ──────────────────────────────────────────────────
+  const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+  const [googleModal, setGoogleModal] = useState(null); // { quiz, lien } | null
+  const [syncResults, setSyncResults] = useState(null); // { quiz, resultats } | null
+  const [googleLoading, setGoogleLoading] = useState({}); // { [quizId]: 'export'|'sync'|null }
+
   const LIMIT = 10;
 
   const loadQuizzes = async () => {
@@ -523,6 +530,24 @@ export default function QuizManager() {
   };
 
   useEffect(() => { loadQuizzes(); }, [page, matiere, classeFilter]);
+
+  // ── Google Forms effects ────────────────────────────────────────────────
+  useEffect(() => {
+    googleFormsApi.getStatus()
+      .then(({ connected }) => setIsGoogleConnected(connected))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('googleConnected') === 'true') {
+      setIsGoogleConnected(true);
+      alert('✅ Compte Google connecté !');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('googleConnected');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
   const handleAction = async (action, id) => {
     try {
@@ -569,6 +594,43 @@ export default function QuizManager() {
       setShowLienModal(true);
     } catch (err) {
       alert('Erreur : ' + err.message);
+    }
+  };
+
+  // ── Google Forms handlers ───────────────────────────────────────────────
+  const handleConnectGoogle = async () => {
+    try {
+      const { url } = await googleFormsApi.getAuthUrl();
+      window.location.href = url;
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    }
+  };
+
+  const handleExportToForms = async (quiz) => {
+    setGoogleLoading((prev) => ({ ...prev, [quiz.id]: 'export' }));
+    try {
+      const { lien, formId } = await googleFormsApi.export(quiz.id);
+      quiz.googleFormId = formId;
+      quiz.googleFormUrl = lien;
+      setGoogleModal({ quiz, lien });
+      loadQuizzes();
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    } finally {
+      setGoogleLoading((prev) => ({ ...prev, [quiz.id]: null }));
+    }
+  };
+
+  const handleSyncNotes = async (quiz) => {
+    setGoogleLoading((prev) => ({ ...prev, [quiz.id]: 'sync' }));
+    try {
+      const { resultats } = await googleFormsApi.sync(quiz.id);
+      setSyncResults({ quiz, resultats });
+    } catch (err) {
+      alert('Erreur : ' + err.message);
+    } finally {
+      setGoogleLoading((prev) => ({ ...prev, [quiz.id]: null }));
     }
   };
 
@@ -680,6 +742,37 @@ export default function QuizManager() {
                   <button onClick={() => { setSelectedId(q.id); setPanel('detail'); }}>Voir</button>
                   <button onClick={() => { setSelectedId(q.id); setPanel('edit'); }}>Modifier</button>
                   <button onClick={() => handlePartager(q.id)} style={{ background: '#f0edff', color: '#6c5ce7', border: '1px solid #dcd9e7', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🔗 Partager</button>
+                  {/* Google Forms buttons */}
+                  {!isGoogleConnected && (
+                    <button
+                      onClick={handleConnectGoogle}
+                      style={{ background: '#e8f0fe', color: '#1a73e8', border: '1px solid #c5d9f7', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                      🔗 Connecter Google
+                    </button>
+                  )}
+                  {isGoogleConnected && !q.googleFormId && (
+                    <button
+                      disabled={googleLoading[q.id] === 'export'}
+                      onClick={() => handleExportToForms(q)}
+                      style={{ background: '#e6f4ea', color: '#1e8e3e', border: '1px solid #b7dfbf', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                      {googleLoading[q.id] === 'export' ? '⏳ Export...' : '📤 Exporter vers Forms'}
+                    </button>
+                  )}
+                  {isGoogleConnected && q.googleFormId && (
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(q.googleFormUrl); setGoogleModal({ quiz: q, lien: q.googleFormUrl }); }}
+                      style={{ background: '#e6f4ea', color: '#1e8e3e', border: '1px solid #b7dfbf', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                      📋 Voir le formulaire
+                    </button>
+                  )}
+                  {q.googleFormId && (
+                    <button
+                      disabled={googleLoading[q.id] === 'sync'}
+                      onClick={() => handleSyncNotes(q)}
+                      style={{ background: '#fce8e6', color: '#d93025', border: '1px solid #f5c6c4', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                      {googleLoading[q.id] === 'sync' ? '⏳ Sync...' : '📊 Sync Notes'}
+                    </button>
+                  )}
                   <button className="archive" onClick={() => handleAction('archiver', q.id)}>📦 Archiver</button>
                   <button className="delete" onClick={() => handleDelete(q.id)}>Supprimer</button>
                 </div>
@@ -761,6 +854,77 @@ export default function QuizManager() {
               background: 'transparent', border: '1px solid #dcd9e7',
               color: '#8888aa', cursor: 'pointer', fontSize: 13,
             }}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Google Forms link modal */}
+      {googleModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,60,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(3px)' }}
+          onClick={() => setGoogleModal(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 36px', width: '90%', maxWidth: 540, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+            onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 8px', color: '#1a1a3e', fontSize: 18 }}>📋 Google Forms — {googleModal.quiz.titre}</h2>
+            <p style={{ color: '#69647b', fontSize: 13, marginBottom: 16 }}>Partagez ce lien avec vos étudiants pour qu'ils répondent au quiz.</p>
+            <div style={{ padding: '12px 16px', background: '#f8f7ff', borderRadius: 10, border: '1.5px solid #dcd9e7', marginBottom: 16 }}>
+              <span style={{ fontSize: 12, color: '#4c416d', wordBreak: 'break-all' }}>{googleModal.lien}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+              <button
+                onClick={() => { navigator.clipboard.writeText(googleModal.lien); alert('✓ Lien copié !'); }}
+                style={{ flex: 1, padding: 12, borderRadius: 10, background: '#1a73e8', color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                📋 Copier le lien
+              </button>
+              <button
+                onClick={() => { const s = encodeURIComponent('Quiz Google Forms'); const b = encodeURIComponent(`Voici le lien du quiz :\n${googleModal.lien}`); window.open(`mailto:?subject=${s}&body=${b}`); }}
+                style={{ flex: 1, padding: 12, borderRadius: 10, background: '#f0edff', color: '#6c5ce7', border: '1.5px solid #dcd9e7', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                ✉️ Envoyer par mail
+              </button>
+            </div>
+            <button onClick={() => setGoogleModal(null)}
+              style={{ width: '100%', padding: 10, borderRadius: 10, background: 'transparent', border: '1px solid #dcd9e7', color: '#8888aa', cursor: 'pointer', fontSize: 13 }}>
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sync results modal */}
+      {syncResults && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(30,20,60,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(3px)' }}
+          onClick={() => setSyncResults(null)}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 36px', width: '90%', maxWidth: 640, maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}
+            onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 16px', color: '#1a1a3e', fontSize: 18 }}>📊 Notes — {syncResults.quiz.titre}</h2>
+            {!syncResults.resultats || syncResults.resultats.length === 0
+              ? <p style={{ color: '#69647b' }}>Aucune réponse reçue pour l'instant.</p>
+              : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f7ff' }}>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1.5px solid #dcd9e7' }}>Nom</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1.5px solid #dcd9e7' }}>Matricule</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1.5px solid #dcd9e7' }}>Score</th>
+                      <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1.5px solid #dcd9e7' }}>Note /20</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {syncResults.resultats.map((r, i) => (
+                      <tr key={r.id ?? i} style={{ borderBottom: '1px solid #f0eeff' }}>
+                        <td style={{ padding: '8px 12px' }}>{r.nom}</td>
+                        <td style={{ padding: '8px 12px' }}>{r.prenom}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>{r.score}/{r.total}</td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: r.note >= 10 ? '#1e8e3e' : '#d93025' }}>{r.note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            }
+            <button onClick={() => setSyncResults(null)}
+              style={{ width: '100%', marginTop: 16, padding: 10, borderRadius: 10, background: 'transparent', border: '1px solid #dcd9e7', color: '#8888aa', cursor: 'pointer', fontSize: 13 }}>
               Fermer
             </button>
           </div>
