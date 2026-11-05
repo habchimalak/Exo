@@ -2,6 +2,194 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { promosApi } from '../../services/adminApi'
 import { useEtab } from '../../context/EtablissementContext'
 
+// ── Spécialités disponibles ──────────────────────────────────────────────────
+const SPECIALITES_DEFAULT = [
+  'Cybersécurité',
+  'Data Science',
+  'Cloud Computing',
+  'Génie Logiciel',
+]
+
+// Abréviations pour la génération du code
+const SPEC_ABBR = {
+  'Cybersécurité':  'CYB',
+  'Data Science':   'DS',
+  'Cloud Computing':'CIM',
+  'Génie Logiciel': 'GL',
+}
+
+const NIVEAU_NUM = { '1ere': '1', '2eme': '2', '3eme': '3', '4eme': '4', '5eme': '5' }
+
+// Génère le code automatiquement : ING-4-CIM-B
+function genCode(niveau, specialite, classe) {
+  const n = NIVEAU_NUM[niveau] || '?'
+  const sp = SPEC_ABBR[specialite] || specialite?.slice(0, 3).toUpperCase() || 'GEN'
+  const cl = classe ? `-${classe.toUpperCase()}` : ''
+  return `ING-${n}-${sp}${cl}`
+}
+
+// ── Formulaire promotion ─────────────────────────────────────────────────────
+function PromoForm({ form, setForm, etabType }) {
+  const [specialites, setSpecialites] = useState(SPECIALITES_DEFAULT)
+  const [newSpec, setNewSpec] = useState('')
+  const [showAddSpec, setShowAddSpec] = useState(false)
+
+  // Mise à jour d'un champ + regénération du code si nécessaire
+  const update = (field, value) => {
+    setForm(prev => {
+      const next = { ...prev, [field]: value }
+      // Régénérer le code automatiquement
+      if (['niveau', 'specialite', 'classe'].includes(field)) {
+        next.code = genCode(
+          field === 'niveau'    ? value : next.niveau,
+          field === 'specialite'? value : next.specialite,
+          field === 'classe'    ? value : next.classe,
+        )
+      }
+      return next
+    })
+  }
+
+  // Ajouter une nouvelle spécialité
+  const addSpec = () => {
+    const spec = newSpec.trim()
+    if (!spec || specialites.includes(spec)) return
+    setSpecialites(prev => [...prev, spec])
+    update('specialite', spec)
+    setNewSpec('')
+    setShowAddSpec(false)
+  }
+
+  const niveauOptions = etabType === 'licence'
+    ? [
+        { value: '1ere', label: '1ère Licence' },
+        { value: '2eme', label: '2ème Licence' },
+        { value: '3eme', label: '3ème Licence' },
+        { value: '4eme', label: 'Master 1' },
+        { value: '5eme', label: 'Master 2' },
+      ]
+    : [
+        { value: '1ere', label: '1ère Prépa' },
+        { value: '2eme', label: '2ème Prépa' },
+        { value: '3eme', label: 'Branche commune' },
+        { value: '4eme', label: '4ème année' },
+        { value: '5eme', label: '5ème année' },
+      ]
+
+  // Afficher la spécialité uniquement si niveau 4ème ou 5ème (spécialité)
+  const showSpec = form.type === 'specialite'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      {/* Nom complet */}
+      <div className="form-group">
+        <label className="form-label">Nom complet</label>
+        <input className="input" value={form.nom}
+          onChange={e => setForm(prev => ({ ...prev, nom: e.target.value }))}
+          placeholder="Ex: 4ème année — Cloud Computing" />
+      </div>
+
+      {/* Type */}
+      <div className="form-group">
+        <label className="form-label">Type</label>
+        <select className="input" value={form.type}
+          onChange={e => update('type', e.target.value)}>
+          {etabType === 'cycle_ing' && <option value="prepa">Prépa</option>}
+          {etabType === 'cycle_ing' && <option value="branche_commune">Branche commune</option>}
+          <option value="specialite">Spécialité</option>
+          <option value="general">Général</option>
+        </select>
+      </div>
+
+      {/* Semestre */}
+      <div className="form-group">
+        <label className="form-label">Semestre</label>
+        <select className="input" value={form.semestre}
+          onChange={e => setForm(prev => ({ ...prev, semestre: e.target.value }))}>
+          <option value="S1">Semestre 1</option>
+          <option value="S2">Semestre 2</option>
+          <option value="S1-S2">S1 + S2</option>
+        </select>
+      </div>
+
+      {/* Niveau */}
+      <div className="form-group">
+        <label className="form-label">Niveau</label>
+        <select className="input" value={form.niveau}
+          onChange={e => update('niveau', e.target.value)}>
+          {niveauOptions.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Spécialité — visible si type = spécialité */}
+      {showSpec && (
+        <div className="form-group">
+          <label className="form-label">Spécialité</label>
+          <select className="input" value={form.specialite || ''}
+            onChange={e => {
+              if (e.target.value === '__new__') { setShowAddSpec(true); return }
+              update('specialite', e.target.value)
+            }}>
+            <option value="">— Choisir une spécialité —</option>
+            {specialites.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+            <option value="__new__">+ Ajouter une nouvelle spécialité...</option>
+          </select>
+
+          {/* Champ ajout nouvelle spécialité */}
+          {showAddSpec && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <input className="input" value={newSpec}
+                onChange={e => setNewSpec(e.target.value)}
+                placeholder="Ex: Intelligence Artificielle"
+                onKeyDown={e => e.key === 'Enter' && addSpec()}
+                autoFocus />
+              <button type="button" className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}
+                onClick={addSpec}>
+                Ajouter
+              </button>
+              <button type="button" className="btn btn-secondary"
+                onClick={() => { setShowAddSpec(false); setNewSpec('') }}>
+                ✕
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Classe */}
+      <div className="form-group">
+        <label className="form-label">
+          Classe <span style={{ fontSize: 11, color: '#9090b0', fontWeight: 400 }}>
+            (ex: A, B, C — optionnel)
+          </span>
+        </label>
+        <input className="input" value={form.classe || ''}
+          onChange={e => update('classe', e.target.value)}
+          placeholder="Ex: A, B, C..." />
+      </div>
+
+      {/* Code généré automatiquement */}
+      <div className="form-group">
+        <label className="form-label">
+          Code généré
+          <span style={{ fontSize: 11, color: '#9090b0', fontWeight: 400, marginLeft: 6 }}>
+            (modifiable)
+          </span>
+        </label>
+        <input className="input" value={form.code}
+          onChange={e => setForm(prev => ({ ...prev, code: e.target.value }))}
+          style={{ fontFamily: 'monospace', background: '#f5f3ff', color: '#5b4fcf', fontWeight: 700 }} />
+      </div>
+
+    </div>
+  )
+}
+
 const NIVEAU_CONFIG_ING = {
   '1ere': { label: '1ère Prépa',         color: '#5b4fcf', bg: '#edeaff' },
   '2eme': { label: '2ème Prépa',         color: '#4a90e2', bg: '#e6f0ff' },
@@ -31,7 +219,7 @@ export default function Promos() {
   const [selectedPromo, setSelectedPromo] = useState(null)
   const [showModal, setShowModal] = useState(false)
   const [editItem, setEditItem] = useState(null)
-  const [form, setForm] = useState({ nom: '', code: '', niveau: '4eme', type: 'specialite', specialite: '', semestre: 'S1' })
+  const [form, setForm] = useState({ nom: '', code: '', niveau: '4eme', type: 'specialite', specialite: '', semestre: 'S1', classe: '' })
   const [alertMsg, setAlertMsg] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -53,14 +241,14 @@ export default function Promos() {
 
   function openCreate() {
     setEditItem(null)
-    setForm({ nom: '', code: '', niveau: '4eme', type: 'specialite', specialite: '', semestre: 'S1' })
+    setForm({ nom: '', code: 'ING-4-GEN', niveau: '4eme', type: 'specialite', specialite: '', semestre: 'S1', classe: '' })
     setAlertMsg('')
     setShowModal(true)
   }
 
   function openEdit(p) {
     setEditItem(p)
-    setForm({ nom: p.nom, code: p.code, niveau: p.niveau, type: p.type, specialite: p.specialite ?? '', semestre: p.semestre })
+    setForm({ nom: p.nom, code: p.code, niveau: p.niveau, type: p.type, specialite: p.specialite ?? '', semestre: p.semestre, classe: p.classe || '' })
     setAlertMsg('')
     setShowModal(true)
   }
@@ -73,6 +261,7 @@ export default function Promos() {
         nom: form.nom, code: form.code, niveau: form.niveau,
         type: form.type, semestre: form.semestre,
         specialite: form.specialite || null,
+        classe: form.classe || null,
       }
       if (editItem) {
         const updated = await promosApi.update(editItem.id, payload)
@@ -220,68 +409,20 @@ export default function Promos() {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{editItem ? 'Modifier' : 'Nouvelle promotion'}</div>
               <button className="btn-icon" onClick={() => setShowModal(false)}>X</button>
             </div>
             {alertMsg && <div className="alert alert-error">{alertMsg}</div>}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div className="form-group" style={{ gridColumn: '1/-1' }}>
-                <label className="form-label">Nom complet</label>
-                <input className="input" value={form.nom} onChange={e => setForm({ ...form, nom: e.target.value })} placeholder="Ex: 4ème année — Cloud Computing" />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Code</label>
-                <input className="input" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="ING-4-J-CIM" style={{ fontFamily: 'monospace' }} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Semestre</label>
-                <select className="input" value={form.semestre} onChange={e => setForm({ ...form, semestre: e.target.value })}>
-                  <option value="S1">Semestre 1</option>
-                  <option value="S2">Semestre 2</option>
-                  <option value="S1-S2">S1 + S2</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Niveau</label>
-                <select className="input" value={form.niveau} onChange={e => setForm({ ...form, niveau: e.target.value })}>
-                  {etabType === 'cycle_ing' ? (
-                    <>
-                      <option value="1ere">1ère Prépa</option>
-                      <option value="2eme">2ème Prépa</option>
-                      <option value="3eme">Branche commune</option>
-                      <option value="4eme">4ème année</option>
-                      <option value="5eme">5ème année</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="1ere">1ère Licence</option>
-                      <option value="2eme">2ème Licence</option>
-                      <option value="3eme">3ème Licence</option>
-                      <option value="4eme">Master 1</option>
-                      <option value="5eme">Master 2</option>
-                    </>
-                  )}
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Type</label>
-                <select className="input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
-                  {etabType === 'cycle_ing' && <option value="prepa">Prépa</option>}
-                  {etabType === 'cycle_ing' && <option value="branche_commune">Branche commune</option>}
-                  <option value="specialite">Spécialité</option>
-                  <option value="general">Général</option>
-                </select>
-              </div>
-              {form.type === 'specialite' && (
-                <div className="form-group">
-                  <label className="form-label">Spécialité</label>
-                  <input className="input" value={form.specialite} onChange={e => setForm({ ...form, specialite: e.target.value })} placeholder="Ex: Cloud Computing" />
-                </div>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
+
+            <PromoForm
+              form={form}
+              setForm={setForm}
+              etabType={etabType}
+            />
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Annuler</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving ? 'Enregistrement...' : editItem ? 'Enregistrer' : 'Créer'}
