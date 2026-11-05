@@ -234,47 +234,42 @@ Si on te demande de générer du contenu pédagogique, tu le fais directement.`,
       throw new BadRequestException('Seuls les fichiers PDF et Word (.doc, .docx) sont acceptés');
     }
 
-    // S'assurer que le buffer existe (Multer memoryStorage)
     if (!file.buffer || file.buffer.length === 0) {
-      throw new BadRequestException('Le fichier reçu est vide. Vérifiez que le fichier est valide.');
+      throw new BadRequestException('Le fichier reçu est vide.');
     }
 
     let texte = '';
-    let extractError = '';
 
-    try {
-      if (ext === '.pdf') {
-        // pdf-parse est CommonJS — utiliser createRequire avec chemin absolu
-        try {
-          const { createRequire } = await import('module');
-          const { fileURLToPath } = await import('url');
-          const { dirname, join } = await import('path');
-          // Pointer vers node_modules depuis la racine du projet
-          const projectRoot = process.cwd();
-          const req = createRequire(join(projectRoot, 'package.json'));
-          const pdfParse = req('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
-          const data = await pdfParse(file.buffer);
-          texte = data.text?.trim() ?? '';
-        } catch (pdfErr) {
-          extractError = `PDF: ${(pdfErr as Error).message}`;
-        }
-      } else {
-        // Word (.doc / .docx) avec mammoth
+    if (ext === '.pdf') {
+      try {
+        const { createRequire } = await import('module');
+        const cwd = process.cwd().replace(/\\/g, '/');
+        const req = createRequire(new URL('file:///' + cwd + '/package.json'));
+        const pdfParse = req('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
+        const result = await pdfParse(file.buffer);
+        texte = result.text?.trim() ?? '';
+      } catch (err) {
+        console.error('[extract-pdf] erreur:', (err as Error).message);
+        throw new BadRequestException(
+          `Extraction PDF échouée : ${(err as Error).message}`
+        );
+      }
+    } else {
+      // .doc / .docx avec mammoth
+      try {
         const result = await mammoth.extractRawText({ buffer: file.buffer });
         texte = result.value?.trim() ?? '';
-        if (result.messages?.length) {
-          console.warn('[mammoth]', result.messages);
-        }
+      } catch (err) {
+        console.error('[extract-word] erreur:', (err as Error).message);
+        throw new BadRequestException(
+          `Extraction Word échouée : ${(err as Error).message}`
+        );
       }
-    } catch (err) {
-      extractError = (err as Error).message;
     }
 
     if (!texte) {
       throw new BadRequestException(
-        extractError
-          ? `Erreur d'extraction : ${extractError}`
-          : 'Le fichier semble vide ou son texte ne peut pas être extrait (fichier scanné ?).'
+        'Aucun texte extrait. Le fichier est peut-être vide, scanné (image) ou protégé.'
       );
     }
 
