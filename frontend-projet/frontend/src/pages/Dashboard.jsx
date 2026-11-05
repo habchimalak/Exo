@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth, defaultGroups } from "../context/AuthContext";
 import { contentApi, quizApi } from "../services/api";
+import useMatieres from "../hooks/useMatieres";
 
 // ── Carte contenu ────────────────────────────────────────────────────────────
 function ContentCard({ item, type, onView }) {
@@ -74,6 +75,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const groups = useMemo(() =>
     user?.associations?.length ? user.associations : defaultGroups(), [user]);
+  const { promos: mesPromos } = useMatieres();
 
   const [contents, setContents] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
@@ -88,13 +90,8 @@ export default function Dashboard() {
   // Aperçu
   const [preview, setPreview] = useState(null);
 
-  // Classes disponibles depuis les associations de l'utilisateur
-  const classOptions = useMemo(() => {
-    const classes = [...new Set(groups.map(g =>
-      `${g.className}${g.section !== "Tronc commun" ? " — " + g.section : ""}`
-    ))];
-    return classes;
-  }, [groups]);
+  // Classes depuis l'admin en priorité
+  const classOptions = useMemo(() => mesPromos, [mesPromos]);
 
   useEffect(() => {
     loadAll();

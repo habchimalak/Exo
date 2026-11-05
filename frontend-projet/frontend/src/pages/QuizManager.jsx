@@ -118,11 +118,15 @@ function QuizForm({ initial, onSaved, onCancel }) {
   const { user } = useAuth();
   const { matieres: mesMatieres, promos: mesPromos } = useMatieres();
 
-  // Fallback sur les associations localStorage si le hook n'a pas encore chargé
+  // Classes depuis les associations admin (via hook) — pas de fallback sur defaultGroups
   const classeOptions = mesPromos.length > 0
     ? mesPromos
     : user?.associations?.length
-      ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
+      ? [...new Set(
+          user.associations
+            .map((a) => a.section)
+            .filter(s => s && s !== 'Tronc commun')
+        )]
       : [];
 
   const [form, setForm] = useState(
@@ -314,9 +318,12 @@ function QuizDetail({ quizId, onBack }) {
 function QuizEdit({ quizId, onBack, onSaved }) {
   const { user } = useAuth();
   const classeOptions = user?.associations?.length
-    ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
+    ? [...new Set(
+        user.associations
+          .map((a) => a.section)
+          .filter(s => s && s !== 'Tronc commun')
+      )]
     : [];
-
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -466,10 +473,10 @@ function QuizEdit({ quizId, onBack, onSaved }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function QuizManager() {
   const { user } = useAuth();
+  const { promos: mesPromos } = useMatieres();
 
-  const classeOptions = user?.associations?.length
-    ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
-    : [];
+  // Classes du filtre = classes associées par l'admin
+  const classeOptions = mesPromos;
 
   const [panel, setPanel] = useState(null); // null | 'detail' | 'create' | 'edit'
   const [selectedId, setSelectedId] = useState(null);

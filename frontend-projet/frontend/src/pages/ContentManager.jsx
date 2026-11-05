@@ -221,10 +221,10 @@ function ContentView({ item, onBack }) {
 // ── Page principale ───────────────────────────────────────────────────────────
 export default function ContentManager() {
   const { user } = useAuth();
+  const { promos: mesPromos } = useMatieres();
 
-  const classeOptions = user?.associations?.length
-    ? [...new Set(user.associations.map((a) => `${a.className}${a.section !== 'Tronc commun' ? ' — ' + a.section : ''}`))]
-    : [];
+  // Classes du filtre = classes associées par l'admin
+  const classeOptions = mesPromos;
 
   const [panel, setPanel] = useState(null); // null | 'view' | 'create' | 'edit'
   const [selected, setSelected] = useState(null);

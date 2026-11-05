@@ -53,12 +53,27 @@ export class AuthController {
     const user = this.userService.findOne(currentUser.sub);
     if (!user) throw new UnauthorizedException('Utilisateur introuvable');
     const associations = user.associations ?? [];
+
+    // Mots-clés qui indiquent une "classe" et non une matière
+    const CLASS_KEYWORDS = ['ingénieur', 'ingenieur', 'licence', 'master', 'prépa', 'prepa', 'commun', 'ième', 'ieme', '1ere', '2eme', '3eme', '4eme', '5eme'];
+
+    const isClasse = (val: string) =>
+      CLASS_KEYWORDS.some(k => val.toLowerCase().includes(k));
+
+    // className = matière (si ce n'est pas une classe)
     const matieres: string[] = [...new Set(
-      associations.map((a: any) => a.className).filter(Boolean)
+      associations
+        .map((a: any) => a.className)
+        .filter((v: string) => v && !isClasse(v))
     )];
+
+    // section = promo/classe (si ce n'est pas "Tronc commun")
     const promos: string[] = [...new Set(
-      associations.map((a: any) => a.section).filter(Boolean)
+      associations
+        .map((a: any) => a.section)
+        .filter((v: string) => v && v !== 'Tronc commun')
     )];
+
     return { matieres, promos };
   }
 
