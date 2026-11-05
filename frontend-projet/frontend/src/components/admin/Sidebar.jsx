@@ -4,8 +4,8 @@ import { useAuth } from '../../context/AuthContext'
 const navItems = [
   { id: 'dashboard',    label: 'Tableau de bord', color: '#6c5ce7' },
   { id: 'users',        label: 'Utilisateurs',    color: '#5b8dee' },
-  { id: 'matieres',     label: 'Matières',         color: '#4dabf7' },
   { id: 'promos',       label: 'Promotions',       color: '#38d9a9' },
+  { id: 'matieres',     label: 'Matières',         color: '#4dabf7' },
   { id: 'associations', label: 'Associations',     color: '#845ef7' },
   { id: 'archives',     label: 'Archives',         color: '#748ffc' },
   { id: 'profile',      label: 'Mon profil',       color: '#9775fa' },

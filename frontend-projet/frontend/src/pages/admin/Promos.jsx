@@ -95,9 +95,12 @@ function PromoForm({ form, setForm, etabType }) {
         <label className="form-label">Type</label>
         <select className="input" value={form.type}
           onChange={e => update('type', e.target.value)}>
-          {etabType === 'cycle_ing' && <option value="prepa">Prépa</option>}
-          {etabType === 'cycle_ing' && <option value="branche_commune">Branche commune</option>}
+          <option value="licence">Licence</option>
+          <option value="cycle_ing">Cycle Ingénieur</option>
+          <option value="master">Master</option>
           <option value="specialite">Spécialité</option>
+          <option value="prepa">Prépa</option>
+          <option value="branche_commune">Branche commune</option>
           <option value="general">Général</option>
         </select>
       </div>
