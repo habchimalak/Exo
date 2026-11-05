@@ -16,4 +16,19 @@ export class Quiz {
   // Archivage
   archived: boolean;
   archivedAt?: Date;
+  // Partage public
+  shareToken?: string;
+  resultats?: QuizResultat[];
+}
+
+export class QuizResultat {
+  id: number;
+  nom: string;
+  prenom: string;
+  score: number;        // nombre de bonnes réponses
+  total: number;        // nombre total de questions
+  note: number;         // note sur 20
+  pourcentage: number;
+  date: Date;
+  reponses: { questionId: number; choix: string; correct: boolean }[];
 }

@@ -12,6 +12,7 @@ import ContentManager from "./pages/ContentManager";
 import ArchivesAdmin from "./pages/ArchivesAdmin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
+import QuizPublic from "./pages/QuizPublic";
 import "./App.css";
 import "./layout.css";
 import "./workspace.css";
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/archives-admin" element={<ProtectedRoute><ArchivesAdmin /></ProtectedRoute>} />
         <Route path="/admin-legacy" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>} />
+        <Route path="/quiz/passer/:token" element={<QuizPublic />} />
         {legacyPaths.map(path => <Route key={path} path={path} element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />)}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

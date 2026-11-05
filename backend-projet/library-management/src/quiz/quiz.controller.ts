@@ -16,6 +16,7 @@ import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
 import { ImportQuizDto } from './dto/import-quiz.dto.js';
+import { Public } from '../auth/decorators/public.decorator.js';
 
 @Controller('quiz')
 export class QuizController {
@@ -157,5 +158,44 @@ export class QuizController {
   @HttpCode(HttpStatus.CREATED)
   creerVariante(@Param('id') id: string) {
     return this.quizService.creerVariante(+id);
+  }
+
+  // ─────────────────────────────────────────────────────
+  // PARTAGE PUBLIC
+  // ─────────────────────────────────────────────────────
+
+  // POST /quiz/:id/partager — génère le lien de partage
+  @Post(':id/partager')
+  @HttpCode(HttpStatus.OK)
+  partager(@Param('id') id: string) {
+    return this.quizService.partager(+id);
+  }
+
+  // GET /quiz/:id/resultats — résultats des étudiants (prof)
+  @Get(':id/resultats')
+  getResultats(@Param('id') id: string) {
+    return this.quizService.getResultats(+id);
+  }
+
+  // GET /quiz/public/:token — quiz sans réponses (étudiant, sans auth)
+  @Public()
+  @Get('public/:token')
+  findPublic(@Param('token') token: string) {
+    return this.quizService.findPublic(token);
+  }
+
+  // POST /quiz/public/:token/soumettre — soumettre les réponses (sans auth)
+  @Public()
+  @Post('public/:token/soumettre')
+  @HttpCode(HttpStatus.OK)
+  soumettre(
+    @Param('token') token: string,
+    @Body() body: {
+      nom: string;
+      prenom: string;
+      reponses: { questionId: number; choix: string }[];
+    },
+  ) {
+    return this.quizService.soumettre(token, body);
   }
 }

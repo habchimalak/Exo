@@ -305,4 +305,112 @@ export class QuizService {
 
     return { data: result.slice(start, start + limit), total, page, limit };
   }
+
+  // ─────────────────────────────────────────────────────
+  // PARTAGE PUBLIC
+  // ─────────────────────────────────────────────────────
+
+  /** Génère ou retourne le token de partage du quiz */
+  partager(id: number): { token: string; lien: string } {
+    const quiz = this.findOne(id);
+    if (!quiz.shareToken) {
+      // Générer un token unique
+      quiz.shareToken = `${id}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+      if (!quiz.resultats) quiz.resultats = [];
+    }
+    return {
+      token: quiz.shareToken,
+      lien: `/quiz/passer/${quiz.shareToken}`,
+    };
+  }
+
+  /** Retourne le quiz sans les réponses correctes (pour l'étudiant) */
+  findPublic(token: string) {
+    const quiz = this.quizzes.find(q => q.shareToken === token);
+    if (!quiz) throw new NotFoundException('Quiz introuvable ou lien invalide');
+
+    return {
+      id: quiz.id,
+      titre: quiz.titre,
+      matiere: quiz.matiere,
+      theme: quiz.theme,
+      niveau: quiz.niveau,
+      questions: (quiz.questions || []).map(q => ({
+        id: q.id,
+        enonce: q.enonce,
+        choixA: q.choixA,
+        choixB: q.choixB,
+        choixC: q.choixC,
+        choixD: q.choixD,
+        // PAS de reponseCorrecte ni explication
+      })),
+    };
+  }
+
+  /** Reçoit les réponses de l'étudiant, calcule et sauvegarde la note */
+  soumettre(token: string, body: {
+    nom: string;
+    prenom: string;
+    reponses: { questionId: number; choix: string }[];
+  }) {
+    const quiz = this.quizzes.find(q => q.shareToken === token);
+    if (!quiz) throw new NotFoundException('Quiz introuvable ou lien invalide');
+    if (!quiz.questions || quiz.questions.length === 0) {
+      throw new BadRequestException('Ce quiz ne contient aucune question');
+    }
+
+    let score = 0;
+    const detail = body.reponses.map(r => {
+      const question = quiz.questions.find(q => q.id === r.questionId);
+      const correct = question ? question.reponseCorrecte === r.choix : false;
+      if (correct) score++;
+      return {
+        questionId: r.questionId,
+        choix: r.choix,
+        correct,
+        bonneReponse: question?.reponseCorrecte ?? '',
+        explication: question?.explication ?? '',
+      };
+    });
+
+    const total = quiz.questions.length;
+    const note = Math.round((score / total) * 20 * 100) / 100;
+    const pourcentage = Math.round((score / total) * 100);
+
+    const resultat = {
+      id: (quiz.resultats?.length ?? 0) + 1,
+      nom: body.nom,
+      prenom: body.prenom,
+      score,
+      total,
+      note,
+      pourcentage,
+      date: new Date(),
+      reponses: detail,
+    };
+
+    if (!quiz.resultats) quiz.resultats = [];
+    quiz.resultats.push(resultat);
+
+    return {
+      nom: body.nom,
+      prenom: body.prenom,
+      score,
+      total,
+      note,
+      pourcentage,
+      detail,
+    };
+  }
+
+  /** Retourne les résultats d'un quiz (pour le prof) */
+  getResultats(id: number) {
+    const quiz = this.findOne(id);
+    return {
+      titre: quiz.titre,
+      matiere: quiz.matiere,
+      shareToken: quiz.shareToken,
+      resultats: quiz.resultats ?? [],
+    };
+  }
 }

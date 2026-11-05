@@ -490,6 +490,8 @@ export default function QuizManager() {
   const [classeFilter, setClasseFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [lienPartage, setLienPartage] = useState('');
+  const [showLienModal, setShowLienModal] = useState(false);
 
   const LIMIT = 10;
 
@@ -554,6 +556,19 @@ export default function QuizManager() {
       setPanel('edit');
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handlePartager = async (id) => {
+    try {
+      const data = await quizApi.partager(id);
+      const lien = `${window.location.origin}/quiz/passer/${data.token}`;
+      // Copier dans le presse-papier
+      await navigator.clipboard.writeText(lien);
+      setLienPartage(lien);
+      setShowLienModal(true);
+    } catch (err) {
+      alert('Erreur : ' + err.message);
     }
   };
 
@@ -664,6 +679,7 @@ export default function QuizManager() {
                 <div className="workspace-card-actions">
                   <button onClick={() => { setSelectedId(q.id); setPanel('detail'); }}>Voir</button>
                   <button onClick={() => { setSelectedId(q.id); setPanel('edit'); }}>Modifier</button>
+                  <button onClick={() => handlePartager(q.id)} style={{ background: '#f0edff', color: '#6c5ce7', border: '1px solid #dcd9e7', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🔗 Partager</button>
                   <button className="archive" onClick={() => handleAction('archiver', q.id)}>📦 Archiver</button>
                   <button className="delete" onClick={() => handleDelete(q.id)}>Supprimer</button>
                 </div>
@@ -691,6 +707,64 @@ export default function QuizManager() {
             </div>
           )}
         </>
+      )}
+
+      {/* Modal lien de partage */}
+      {showLienModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(30,20,60,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, backdropFilter: 'blur(3px)',
+        }} onClick={() => setShowLienModal(false)}>
+          <div style={{
+            background: '#fff', borderRadius: 16, padding: '32px 36px',
+            width: '90%', maxWidth: 520,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+          }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 8px', color: '#1a1a3e', fontSize: 18 }}>🔗 Lien de partage</h2>
+            <p style={{ color: '#69647b', fontSize: 13, marginBottom: 20 }}>
+              Copiez ce lien et envoyez-le à vos étudiants. Ils pourront répondre sans créer de compte.
+            </p>
+            <div style={{
+              padding: '12px 16px', background: '#f8f7ff',
+              borderRadius: 10, border: '1.5px solid #dcd9e7', marginBottom: 16,
+            }}>
+              <span style={{ fontSize: 12, color: '#4c416d', wordBreak: 'break-all' }}>
+                {lienPartage}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={async () => {
+                await navigator.clipboard.writeText(lienPartage);
+                alert('✓ Lien copié !');
+              }} style={{
+                flex: 1, padding: '12px', borderRadius: 10,
+                background: '#6c5ce7', color: '#fff',
+                border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              }}>
+                📋 Copier le lien
+              </button>
+              <button onClick={() => {
+                const s = encodeURIComponent('Quiz à compléter');
+                const b = encodeURIComponent(`Bonjour,\n\nVoici le lien pour accéder au quiz :\n${lienPartage}\n\nBonne chance !`);
+                window.open(`mailto:?subject=${s}&body=${b}`);
+              }} style={{
+                flex: 1, padding: '12px', borderRadius: 10,
+                background: '#f0edff', color: '#6c5ce7',
+                border: '1.5px solid #dcd9e7', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              }}>
+                ✉️ Envoyer par mail
+              </button>
+            </div>
+            <button onClick={() => setShowLienModal(false)} style={{
+              width: '100%', marginTop: 10, padding: '10px', borderRadius: 10,
+              background: 'transparent', border: '1px solid #dcd9e7',
+              color: '#8888aa', cursor: 'pointer', fontSize: 13,
+            }}>
+              Fermer
+            </button>
+          </div>
+        </div>
       )}
     </DashboardLayout>
   );
