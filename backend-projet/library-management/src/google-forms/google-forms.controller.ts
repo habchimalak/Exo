@@ -21,10 +21,10 @@ export class GoogleFormsController {
     return { url: this.googleFormsService.getAuthUrl() };
   }
 
-  /** GET /google-forms/callback?code=... — exchange code, redirect to frontend */
+  /** GET /google-forms/callback — échange le code OAuth (vrai endpoint) */
   @Public()
   @Get('callback')
-  async handleCallback(
+  async handleCallbackForms(
     @Query('code') code: string,
     @Res() res: Response,
   ): Promise<void> {
