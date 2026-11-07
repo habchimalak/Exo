@@ -31,7 +31,7 @@ export class QuizService {
   // CRUD QUIZ
   // ─────────────────────────────────────────────────────
 
-  create(createQuizDto: CreateQuizDto): Quiz {
+  create(createQuizDto: CreateQuizDto & { auteurId?: number }): Quiz {
     const newQuiz: Quiz = {
       id: this.nextQuizId++,
       titre: createQuizDto.titre,
@@ -43,6 +43,7 @@ export class QuizService {
       dateGeneration: new Date(),
       questions: [],
       archived: false,
+      auteurId: createQuizDto.auteurId,
     };
     this.quizzes.push(newQuiz);
     Persist.save();
@@ -253,6 +254,7 @@ export class QuizService {
   // ─────────────────────────────────────────────────────
 
   findAllPaginated(filters: {
+    auteurId?: number;
     matiere?: string;
     statut?: 'brouillon' | 'valide';
     niveau?: string;
@@ -261,6 +263,9 @@ export class QuizService {
   }): { data: Quiz[]; total: number; page: number; limit: number } {
     // Exclure les archivés de la liste normale
     let result = this.quizzes.filter((q) => !q.archived);
+
+    // Filtrer par auteur si fourni
+    if (filters.auteurId) result = result.filter((q) => q.auteurId === filters.auteurId);
 
     if (filters.matiere) result = result.filter((q) => q.matiere.toLowerCase().includes(filters.matiere!.toLowerCase()));
     if (filters.statut)  result = result.filter((q) => q.statut === filters.statut);

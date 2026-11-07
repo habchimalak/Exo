@@ -85,9 +85,9 @@ export class AiController {
   @HttpCode(HttpStatus.CREATED)
   save(
     @Body() dto: SaveGeneratedDto,
-    @CurrentUser() user: { id: number },
+    @CurrentUser() user: { sub: number; id: number },
   ) {
-    return this.aiService.save(dto, user?.id);
+    return this.aiService.save(dto, user?.sub ?? user?.id);
   }
 
   // ─────────────────────────────────────────────────────

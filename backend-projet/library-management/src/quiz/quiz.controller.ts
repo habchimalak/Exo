@@ -17,6 +17,7 @@ import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
 import { ImportQuizDto } from './dto/import-quiz.dto.js';
 import { Public } from '../auth/decorators/public.decorator.js';
+import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 
 @Controller('quiz')
 export class QuizController {
@@ -28,13 +29,17 @@ export class QuizController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() createQuizDto: CreateQuizDto) {
-    return this.quizService.create(createQuizDto);
+  create(
+    @Body() createQuizDto: CreateQuizDto,
+    @CurrentUser() user: { sub: number; id: number },
+  ) {
+    return this.quizService.create({ ...createQuizDto, auteurId: user.sub ?? user.id });
   }
 
-  // GET /quiz?matiere=Info&statut=valide&page=1&limit=10
+  // GET /quiz — retourne uniquement les quiz de l'utilisateur connecté
   @Get()
   findAll(
+    @CurrentUser() user: { sub: number; id: number },
     @Query('matiere') matiere?: string,
     @Query('statut') statut?: 'brouillon' | 'valide',
     @Query('niveau') niveau?: string,
@@ -42,6 +47,7 @@ export class QuizController {
     @Query('limit') limit?: string,
   ) {
     return this.quizService.findAllPaginated({
+      auteurId: user.sub ?? user.id,
       matiere,
       statut,
       niveau,
