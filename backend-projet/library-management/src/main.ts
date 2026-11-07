@@ -49,8 +49,11 @@ async function bootstrap() {
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, documentFactory);
 
+  // ── Charger les données persistées D'ABORD ─────────────
+  Persist.loadAll();
+
   // ── Seed admin par défaut ────────────────────────────
-  // Crée le compte admin au démarrage s'il n'existe pas encore
+  // Crée le compte admin APRÈS le chargement des données persistées
   const authService = app.get(AuthService);
   try {
     await authService.register({
@@ -61,17 +64,10 @@ async function bootstrap() {
       role: 'admin',
     } as any);
     console.log('✅ Compte admin créé : admin@tekup.tn / admin@1234');
+    Persist.saveAll(); // sauvegarder immédiatement
   } catch {
-    // Déjà existant — pas d'action nécessaire
     console.log('ℹ️  Compte admin déjà existant.');
   }
-
-  // ── Charger les données persistées ─────────────────────
-  Persist.loadAll();
-
-  // ── Sauvegarder les données à l'arrêt du serveur ────────
-  process.on('SIGINT', () => { Persist.saveAll(); process.exit(0); });
-  process.on('SIGTERM', () => { Persist.saveAll(); process.exit(0); });
 
   await app.listen(process.env.PORT ?? 3000);
 }
