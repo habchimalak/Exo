@@ -1,11 +1,16 @@
 import { useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import useMatieres from "../hooks/useMatieres";
 import logo from "../assets/exocraft-logo.png";
 
-function DashboardLayout({ children, activePage, groups = [], selectedGroup = null, onSelectGroup }) {
+function DashboardLayout({ children, activePage, selectedGroup = null, onSelectGroup }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { promos: mesClasses } = useMatieres();
+
+  // Convertir les promos en format { className, section } pour compatibilité
+  const groups = mesClasses.map(p => ({ className: p, section: '' }));
 
   const baseItems = [
     { path: '/dashboard', page: 'dashboard', icon: '▣', label: 'Tableau de bord' },
@@ -51,9 +56,9 @@ function DashboardLayout({ children, activePage, groups = [], selectedGroup = nu
         <p className="sidebar-title">MES CLASSES</p>
         <button type="button" className={`sidebar-group-button${selectedGroup === "all" ? " active" : ""}`} onClick={() => { onSelectGroup?.("all"); if (mobile) closeMenu(); }}>Toutes les classes</button>
         {groups.map((group) => {
-          const key = `${group.className} / ${group.section}`;
-          const isActive = selectedGroup?.className === group.className && selectedGroup?.section === group.section;
-          return <button key={key} type="button" className={`sidebar-group-button${isActive ? " active" : ""}`} onClick={() => { onSelectGroup?.(group); if (mobile) closeMenu(); }}><span>{group.className}</span><small>{group.section}</small></button>;
+          const key = group.className;
+          const isActive = selectedGroup?.className === group.className;
+          return <button key={key} type="button" className={`sidebar-group-button${isActive ? " active" : ""}`} onClick={() => { onSelectGroup?.(group); if (mobile) closeMenu(); }}><span>{group.className}</span></button>;
         })}
       </div>}
       <button type="button" className="sidebar-item sidebar-logout" onClick={signOut}>
