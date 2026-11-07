@@ -741,7 +741,6 @@ export default function QuizManager() {
                 <div className="workspace-card-actions">
                   <button onClick={() => { setSelectedId(q.id); setPanel('detail'); }}>Voir</button>
                   <button onClick={() => { setSelectedId(q.id); setPanel('edit'); }}>Modifier</button>
-                  <button onClick={() => handlePartager(q.id)} style={{ background: '#f0edff', color: '#6c5ce7', border: '1px solid #dcd9e7', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>🔗 Partager</button>
                   {/* Google Forms buttons */}
                   {!isGoogleConnected && (
                     <button
