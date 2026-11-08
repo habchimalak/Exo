@@ -9,6 +9,8 @@ import { UpdateContentDto } from './dto/update-content.dto.js';
 import { FilterContentDto } from './dto/filter-content.dto.js';
 import { Content } from './entities/content.entity.js';
 import { Persist } from '../db/persist.js';
+import { existsSync, unlinkSync, copyFileSync } from 'fs';
+import { dirname, extname, join } from 'path';
 
 @Injectable()
 export class ContentService {
@@ -116,8 +118,43 @@ export class ContentService {
     this.checkOwnership(content, auteurId);
     const index = this.contents.findIndex((c) => c.id === id);
     const [removed] = this.contents.splice(index, 1);
+    this.deleteFile(removed.fichierChemin);
     Persist.save();
     return removed;
+  }
+
+  // ─────────────────────────────────────────────────────
+  // FICHIER ORIGINAL (PDF / Word conservé en plus du texte)
+  // ─────────────────────────────────────────────────────
+
+  private deleteFile(chemin?: string) {
+    if (chemin && existsSync(chemin)) {
+      try { unlinkSync(chemin); } catch { /* ignore */ }
+    }
+  }
+
+  attachFile(id: number, auteurId: number, file: Express.Multer.File): Content {
+    const content = this.findOne(id);
+    try {
+      this.checkOwnership(content, auteurId);
+    } catch (e) {
+      this.deleteFile(file.path); // ne pas garder un fichier refusé
+      throw e;
+    }
+    this.deleteFile(content.fichierChemin); // remplace l'ancien fichier
+    content.fichierNom = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    content.fichierChemin = file.path;
+    content.dateModification = new Date();
+    Persist.save();
+    return content;
+  }
+
+  getFile(id: number): { chemin: string; nom: string } {
+    const content = this.findOne(id);
+    if (!content.fichierChemin || !existsSync(content.fichierChemin)) {
+      throw new NotFoundException('Aucun fichier associé à ce contenu');
+    }
+    return { chemin: content.fichierChemin, nom: content.fichierNom ?? 'document' + extname(content.fichierChemin) };
   }
 
   // ─────────────────────────────────────────────────────
@@ -170,6 +207,15 @@ export class ContentService {
       dateModification: new Date(),
       titre: `[Copie] ${original.titre}`,
     };
+    // Chaque contenu possède son propre fichier (sinon supprimer l'un casserait l'autre)
+    if (original.fichierChemin && existsSync(original.fichierChemin)) {
+      const nouveau = join(dirname(original.fichierChemin), `${Date.now()}-${Math.round(Math.random() * 1e9)}${extname(original.fichierChemin)}`);
+      copyFileSync(original.fichierChemin, nouveau);
+      copie.fichierChemin = nouveau;
+    } else {
+      copie.fichierNom = undefined;
+      copie.fichierChemin = undefined;
+    }
     this.contents.push(copie);
     Persist.save();
     return copie;
