@@ -28,6 +28,7 @@ const lastSaved = new Map<string, string>(); // dernier JSON écrit, par collect
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let saving: Promise<void> = Promise.resolve();
 let pool: pg.Pool | null = null;
+let loaded = false; // vrai seulement après un chargement réussi depuis PostgreSQL
 
 function getPool(): pg.Pool {
   if (!pool) {
@@ -67,10 +68,13 @@ async function loadFromPostgres() {
       lastSaved.set(key, JSON.stringify(data[key]));
     }
   }
+  loaded = true;
   console.log(`🐘 Données chargées depuis PostgreSQL (${rows.length} collections)`);
 }
 
 async function saveToPostgres() {
+    // Ne jamais écrire (et donc écraser la base) tant que le chargement n'a pas réussi
+  if (!loaded) return;
   const db = getPool();
   for (const [key, { get }] of registry) {
     const json = JSON.stringify(get());
