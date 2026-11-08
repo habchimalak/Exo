@@ -94,6 +94,13 @@ export const contentApi = {
   create:   (data)     => apiRequest("/contents",        { method: "POST",   body: JSON.stringify(data) }),
   update:   (id, data) => apiRequest(`/contents/${id}`,  { method: "PATCH",  body: JSON.stringify(data) }),
   remove:   (id)       => apiRequest(`/contents/${id}`,  { method: "DELETE" }),
+  // Fichier original (PDF / Word) conservé sur le serveur
+  uploadFichier: (id, file) => {
+    const fd = new FormData();
+    fd.append("fichier", file);
+    return apiRequest(`/contents/${id}/fichier`, { method: "POST", body: fd });
+  },
+  fichierUrl: (id) => `${window.location.origin}${API_URL}/contents/${id}/fichier?token=${getToken()}`,
   valider:  (id)       => apiRequest(`/contents/${id}/valider`,    { method: "PATCH" }),
   publier:  (id)       => apiRequest(`/contents/${id}/visibilite`, { method: "PATCH" }),
   dupliquer:(id)       => apiRequest(`/contents/${id}/dupliquer`,  { method: "POST"  }),

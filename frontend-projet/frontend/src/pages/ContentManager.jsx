@@ -33,6 +33,7 @@ function ContentForm({ initial, onSaved, onCancel }) {
   const [error, setError] = useState('');
   const [extracting, setExtracting] = useState(false);
   const [extractedFile, setExtractedFile] = useState('');
+  const [pendingFile, setPendingFile] = useState(null); // fichier original à conserver
   const fileInputRef = useRef(null);
 
   const update = (e) => setForm((cur) => ({ ...cur, [e.target.name]: e.target.value }));
@@ -58,6 +59,7 @@ function ContentForm({ initial, onSaved, onCancel }) {
       const data = await res.json();
       setForm((cur) => ({ ...cur, contenu: data.texte }));
       setExtractedFile(file.name);
+      setPendingFile(file);
     } catch (err) {
       setError("Impossible d'extraire le texte : " + err.message);
     } finally {
@@ -72,10 +74,16 @@ function ContentForm({ initial, onSaved, onCancel }) {
     setError('');
     try {
       const payload = { ...form, theme: form.classe };
+      let contentId = initial?.id;
       if (initial?.id) {
         await contentApi.update(initial.id, payload);
       } else {
-        await contentApi.create(payload);
+        const created = await contentApi.create(payload);
+        contentId = created?.id;
+      }
+      // Conserver le PDF / Word d'origine sur le serveur
+      if (pendingFile && contentId) {
+        await contentApi.uploadFichier(contentId, pendingFile);
       }
       onSaved();
     } catch (err) {
@@ -158,7 +166,11 @@ function ContentForm({ initial, onSaved, onCancel }) {
                 {extracting ? '⏳ Extraction...' : '📎 Importer un PDF ou Word'}
               </button>
               {extractedFile && (
-                <span style={{ fontSize: 12, color: '#00b894', fontWeight: 600 }}>✓ {extractedFile}</span>
+                <span style={{ fontSize: 12, color: '#00b894', fontWeight: 600 }}>✓ {extractedFile} (sera conservé)</span>
+              )}
+              {!extractedFile && initial?.fichierNom && (
+                <a href={contentApi.fichierUrl(initial.id)} target="_blank" rel="noreferrer"
+                  style={{ fontSize: 12, color: '#6252ed', fontWeight: 600 }}>📄 {initial.fichierNom}</a>
               )}
               <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx"
                 style={{ display: 'none' }} onChange={handleFileUpload} />
@@ -207,6 +219,12 @@ function ContentView({ item, onBack }) {
           <span className={`workspace-badge${item.statut === 'valide' ? ' valid' : ''}`}>{item.statut}</span>
         </div>
         <h2 style={{ marginBottom: 16 }}>{item.titre}</h2>
+        {item.fichierNom && (
+          <a className="workspace-button secondary" href={contentApi.fichierUrl(item.id)} target="_blank" rel="noreferrer"
+            style={{ display: 'inline-block', marginBottom: 16, textDecoration: 'none' }}>
+            📄 Télécharger le fichier original ({item.fichierNom})
+          </a>
+        )}
         <div className="workspace-preview-body" style={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
           {item.contenu
             ? item.contenu

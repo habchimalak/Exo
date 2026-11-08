@@ -10,6 +10,9 @@ export class Content {
   auteurId: number;
   dateCreation: Date;
   dateModification: Date;
+  // Fichier original (PDF / Word) conservé sur le serveur
+  fichierNom?: string;     // nom d'origine, affiché à l'utilisateur
+  fichierChemin?: string;  // chemin sur le serveur (volume uploads)
   // Archivage
   archived: boolean;
   archivedAt?: Date;
