@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN NODE_OPTIONS=--max-old-space-size=3072 npm run build
 
 # ---------- Étape 2 : image finale (légère) ----------
 FROM node:22-slim
