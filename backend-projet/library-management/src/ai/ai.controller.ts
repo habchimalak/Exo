@@ -19,9 +19,14 @@ import { SaveGeneratedDto } from './dto/save-generated.dto.js';
 import { ChatDto } from './dto/chat.dto.js';
 import { CurrentUser } from '../auth/decorators/current-user.decorator.js';
 import { Public } from '../auth/decorators/public.decorator.js';
+import { PaymentService } from '../payment/payment.service.js';
+
 @Controller('ai')
 export class AiController {
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly paymentService: PaymentService,
+  ) {}
 
   // ─────────────────────────────────────────────────────
   // POST /ai/extract-text
@@ -43,35 +48,46 @@ export class AiController {
 
   // ─────────────────────────────────────────────────────
   // POST /ai/chat
-  // Conversation libre avec l'IA
+  // Conversation libre avec l'IA — consomme 1 crédit
   // ─────────────────────────────────────────────────────
   @Post('chat')
   @HttpCode(HttpStatus.OK)
-  chat(@Body() dto: ChatDto) {
+  async chat(
+    @Body() dto: ChatDto,
+    @CurrentUser() user: { sub: number; id: number },
+  ) {
+    // Vérifier et consommer 1 crédit (lève 400 si insuffisant)
+    this.paymentService.consumeCredit(user.sub ?? user.id);
     return this.aiService.chat(dto);
   }
 
   // ─────────────────────────────────────────────────────
   // POST /ai/generate-from-archive/:archiveId (BF-19)
-  // Génère du contenu depuis le texte d'une archive
+  // Génère du contenu depuis le texte d'une archive — consomme 1 crédit
   // ─────────────────────────────────────────────────────
   @Post('generate-from-archive/:archiveId')
   @HttpCode(HttpStatus.OK)
-  generateFromArchive(
+  async generateFromArchive(
     @Param('archiveId') archiveId: string,
     @Body() dto: GenerateContentDto,
+    @CurrentUser() user: { sub: number; id: number },
   ) {
+    this.paymentService.consumeCredit(user.sub ?? user.id);
     return this.aiService.generateFromArchive(+archiveId, dto);
   }
 
   // ─────────────────────────────────────────────────────
   // POST /ai/generate
   // L'enseignant envoie : matière, type, thème, cours (optionnel)
-  // L'IA retourne le contenu généré (pas encore sauvegardé)
+  // L'IA retourne le contenu généré — consomme 1 crédit
   // ─────────────────────────────────────────────────────
   @Post('generate')
   @HttpCode(HttpStatus.OK)
-  generate(@Body() dto: GenerateContentDto) {
+  async generate(
+    @Body() dto: GenerateContentDto,
+    @CurrentUser() user: { sub: number; id: number },
+  ) {
+    this.paymentService.consumeCredit(user.sub ?? user.id);
     return this.aiService.generate(dto);
   }
 

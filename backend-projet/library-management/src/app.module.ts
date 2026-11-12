@@ -18,6 +18,7 @@ import { ProfileModule } from './profile/profile.module.js';
 import { NotesModule } from './notes/notes.module.js';
 import { GenerationsModule } from './generations/generations.module.js';
 import { GoogleFormsModule } from './google-forms/google-forms.module.js';
+import { PaymentModule } from './payment/payment.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { GoogleFormsModule } from './google-forms/google-forms.module.js';
     NotesModule,
     GenerationsModule,
     GoogleFormsModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

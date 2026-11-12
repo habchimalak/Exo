@@ -13,6 +13,10 @@ import ArchivesAdmin from "./pages/ArchivesAdmin";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
 import QuizPublic from "./pages/QuizPublic";
+import Pricing from "./pages/Pricing";
+import PaymentCheckout from "./pages/PaymentCheckout";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFail from "./pages/PaymentFail";
 import "./App.css";
 import "./layout.css";
 import "./workspace.css";
@@ -40,6 +44,10 @@ export default function App() {
         <Route path="/admin-legacy" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>} />
         <Route path="/quiz/passer/:token" element={<QuizPublic />} />
+        <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
+        <Route path="/payment/checkout" element={<PaymentCheckout />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/fail" element={<PaymentFail />} />
         {legacyPaths.map(path => <Route key={path} path={path} element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />)}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

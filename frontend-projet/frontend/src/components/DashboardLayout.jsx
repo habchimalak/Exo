@@ -1,13 +1,22 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import useMatieres from "../hooks/useMatieres";
 import logo from "../assets/exocraft-logo.png";
+import { paymentApi } from "../services/api";
 
 function DashboardLayout({ children, activePage, selectedGroup = null, onSelectGroup }) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { promos: mesClasses } = useMatieres();
+  const [credits, setCredits] = useState(null);
+
+  // Charger le solde de crédits
+  useEffect(() => {
+    paymentApi.myCredits()
+      .then((d) => setCredits(d.credits))
+      .catch(() => {}); // silencieux si erreur
+  }, []);
 
   // Convertir les promos en format { className, section } pour compatibilité
   const groups = mesClasses.map(p => ({ className: p, section: '' }));
@@ -18,6 +27,7 @@ function DashboardLayout({ children, activePage, selectedGroup = null, onSelectG
     { path: '/quiz',      page: 'quiz',      icon: '☑', label: 'Mes Exercices' },
     { path: '/contents',  page: 'contents',  icon: '📚', label: 'Mes Cours' },
     { path: '/archives',  page: 'archives',  icon: '▧', label: 'Archives' },
+    { path: '/pricing',   page: 'pricing',   icon: '💳', label: 'Crédits IA' },
   ];
   const adminItem = { path: '/admin', page: 'admin', icon: '⚙', label: 'Administration' };
   const menuItems = user?.role === 'administrateur' ? [...baseItems, adminItem] : baseItems;
@@ -100,6 +110,23 @@ function DashboardLayout({ children, activePage, selectedGroup = null, onSelectG
             {selectedGroup && selectedGroup !== "all" && <span className="dashboard-context-breadcrumb">{selectedGroup.className} / {selectedGroup.section}</span>}
           </div>
           <div className="dashboard-user">
+            {/* Badge crédits IA */}
+            {credits !== null && (
+              <Link to="/pricing" style={{ textDecoration: "none" }} title="Acheter des crédits">
+                <div style={{
+                  background: credits === 0 ? "#fff5f5" : "#ede9fe",
+                  border: `1px solid ${credits === 0 ? "#fed7d7" : "#ddd6fe"}`,
+                  borderRadius: 20, padding: "4px 14px",
+                  display: "flex", alignItems: "center", gap: 6,
+                  fontSize: "0.85rem", fontWeight: 700,
+                  color: credits === 0 ? "#e53e3e" : "#6c5ce7",
+                  cursor: "pointer",
+                }}>
+                  <span>⚡</span>
+                  <span>{credits} crédit{credits > 1 ? "s" : ""}</span>
+                </div>
+              </Link>
+            )}
             <div className="dashboard-user-info">
               <span className="dashboard-user-label">{user?.role === 'administrateur' ? 'ADMINISTRATEUR' : 'ESPACE ENSEIGNANT'}</span>
               <span className="dashboard-user-email" title={user?.email}>

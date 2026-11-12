@@ -31,6 +31,8 @@ export class UserService {
       motDePasseHash: data.motDePasse,
       role: data.role || 'enseignant',
       associations: data.associations || [],
+      credits: 10,     // 10 crédits gratuits à l'inscription
+      plan: 'free',
     };
     this.users.push(newUser);
     Persist.save();

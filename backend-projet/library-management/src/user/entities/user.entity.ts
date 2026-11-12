@@ -15,4 +15,7 @@ export class User {
   etablissement?: string;
   // associations classes/sections envoyées par le frontend de Rami
   associations: Array<{ className: string; section: string }>;
+  // ─── Paiement / Crédits ───────────────────────────────────────────────────
+  credits: number;       // nombre de générations IA restantes
+  plan: 'free' | 'pro' | 'premium'; // plan actuel
 }

@@ -271,3 +271,22 @@ export const api = {
 };
 
 export default api;
+
+// ─── Paiement / Crédits ───────────────────────────────────────────────────────
+export const paymentApi = {
+  // Liste des packs disponibles (public)
+  getPlans: () => apiRequest('/payment/plans'),
+
+  // Initier un paiement mock → retourne { url, paymentRef }
+  initiate: (packId) =>
+    apiRequest('/payment/initiate', {
+      method: 'POST',
+      body: JSON.stringify({ packId }),
+    }),
+
+  // Vérifier et créditer le paiement mock (token signé)
+  verify: (token) => apiRequest(`/payment/verify?token=${encodeURIComponent(token)}`),
+
+  // Solde de crédits de l'utilisateur connecté
+  myCredits: () => apiRequest('/payment/my-credits'),
+};
