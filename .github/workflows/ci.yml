@@ -1,0 +1,120 @@
+name: CI — Tests & Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# Annule les runs en cours si un nouveau push arrive sur la même branche
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 1 — Backend : lint + tests + build TypeScript
+  # ─────────────────────────────────────────────────────────────────
+  backend:
+    name: Backend (NestJS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-projet/library-management
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend-projet/library-management/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+        continue-on-error: true  # lint warning ne bloque pas le CI
+
+      - name: TypeScript — vérification des types
+        run: npx tsc --noEmit
+
+      - name: Tests unitaires (vitest)
+        run: npm test
+        env:
+          # Variables minimales pour que NestJS démarre en test
+          JWT_SECRET: test_secret_ci
+          JWT_EXPIRATION: 1d
+          OPENROUTER_API_KEY: sk-or-fake-key-for-ci
+          OPENROUTER_MODEL: meta-llama/llama-3.3-70b-instruct
+          DATABASE_URL: ""
+          PORT: 3000
+          NODE_ENV: test
+
+      - name: Build production (tsc → dist/)
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload artefact dist/
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist
+          path: backend-projet/library-management/dist
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 2 — Frontend : lint + tests + build Vite
+  # ─────────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend (React + Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-projet/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend-projet/frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Tests unitaires (node:test)
+        run: npm test
+
+      - name: Build production (Vite)
+        run: npm run build
+
+      - name: Upload artefact dist/
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-projet/frontend/dist
+          retention-days: 1
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 3 — Résumé : vérifier que les deux builds sont OK
+  # ─────────────────────────────────────────────────────────────────
+  ci-ok:
+    name: CI OK
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tous les jobs CI ont réussi ✅
+        run: echo "Backend + Frontend OK"

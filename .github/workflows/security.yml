@@ -1,0 +1,41 @@
+name: Security — Audit dépendances
+
+on:
+  schedule:
+    # Tous les lundis à 8h00 UTC
+    - cron: '0 8 * * 1'
+  # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:
+
+jobs:
+  audit-backend:
+    name: npm audit — Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-projet/library-management
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Audit (high + critical uniquement)
+        run: npm audit --audit-level=high
+        continue-on-error: true  # rapport sans bloquer
+
+  audit-frontend:
+    name: npm audit — Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-projet/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+      - name: Audit (high + critical uniquement)
+        run: npm audit --audit-level=high
+        continue-on-error: true

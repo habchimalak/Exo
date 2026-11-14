@@ -1,0 +1,52 @@
+# docker-compose.prod.yml — utilisé par le CD sur le serveur
+# Les images sont celles buildées et poussées par GitHub Actions sur GHCR.
+# Lancer avec : docker compose -f docker-compose.prod.yml up -d
+
+services:
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - exo-net
+    restart: unless-stopped
+
+  frontend:
+    # Image buildée par GitHub Actions — remplacée automatiquement par le CD
+    image: ${FRONTEND_IMAGE:-ghcr.io/habchimalak/exocraft-frontend:latest}
+    networks:
+      - exo-net
+    restart: unless-stopped
+
+  backend:
+    # Image buildée par GitHub Actions — remplacée automatiquement par le CD
+    image: ${BACKEND_IMAGE:-ghcr.io/habchimalak/exocraft-backend:latest}
+    env_file:
+      - .env
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+    volumes:
+      - exo-uploads:/app/uploads
+      - exo-db:/app/db
+    networks:
+      - exo-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  exo-net:
+
+volumes:
+  exo-uploads:
+  exo-db:

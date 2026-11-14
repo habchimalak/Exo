@@ -58,7 +58,7 @@ export class AiController {
   ) {
     // Vérifier et consommer 1 crédit (lève 400 si insuffisant)
     this.paymentService.consumeCredit(user.sub ?? user.id);
-    return this.aiService.chat(dto);
+    return this.aiService.chat(dto, user.sub ?? user.id);
   }
 
   // ─────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ export class AiController {
     @CurrentUser() user: { sub: number; id: number },
   ) {
     this.paymentService.consumeCredit(user.sub ?? user.id);
-    return this.aiService.generateFromArchive(+archiveId, dto);
+    return this.aiService.generateFromArchive(+archiveId, dto, user.sub ?? user.id);
   }
 
   // ─────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ export class AiController {
     @CurrentUser() user: { sub: number; id: number },
   ) {
     this.paymentService.consumeCredit(user.sub ?? user.id);
-    return this.aiService.generate(dto);
+    return this.aiService.generate(dto, user.sub ?? user.id);
   }
 
   // ─────────────────────────────────────────────────────

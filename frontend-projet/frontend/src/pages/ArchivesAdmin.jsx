@@ -1,62 +1,35 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
-import { useAuth } from '../context/AuthContext';
-import { archiveApi, quizApi, contentApi } from '../services/api';
+import { quizApi, contentApi, archiveApi } from '../services/api';
 
 export default function ArchivesAdmin() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
 
-  // ── Onglet actif ─────────────────────────────────────
+  /* ── Onglets ─────────────────────────────────────── */
   const [tab, setTab] = useState('quiz'); // 'quiz' | 'contenus'
 
-  // ── Archives fichiers ─────────────────────────────────
-  const [archives, setArchives] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [filterMatiere, setFilterMatiere] = useState('');
-  const [filterPromotion, setFilterPromotion] = useState('');
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadForm, setUploadForm] = useState({ file: null, matiere: '', promotion: '' });
-  const [textPanel, setTextPanel] = useState({ archiveId: null, text: '' });
+  /* ── Quiz archivés ───────────────────────────────── */
+  const [archivedQuizzes, setArchivedQuizzes]   = useState([]);
+  const [quizTotal, setQuizTotal]               = useState(0);
+  const [quizPage,  setQuizPage]                = useState(1);
 
-  // ── Quiz archivés ─────────────────────────────────────
-  const [archivedQuizzes, setArchivedQuizzes] = useState([]);
-  const [quizTotal, setQuizTotal] = useState(0);
-  const [quizPage, setQuizPage] = useState(1);
-
-  // ── Contenus archivés ─────────────────────────────────
+  /* ── Contenus archivés ───────────────────────────── */
   const [archivedContents, setArchivedContents] = useState([]);
-  const [contentsTotal, setContentsTotal] = useState(0);
-  const [contentsPage, setContentsPage] = useState(1);
+  const [contentsTotal,    setContentsTotal]    = useState(0);
+  const [contentsPage,     setContentsPage]     = useState(1);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [error,   setError]   = useState('');
+  const [notice,  setNotice]  = useState('');
 
   const LIMIT = 10;
 
-  // ── Chargements ───────────────────────────────────────
-  const loadArchives = async () => {
-    setLoading(true); setError('');
-    try {
-      const params = { page, limit: LIMIT };
-      if (filterMatiere) params.matiere = filterMatiere;
-      if (filterPromotion) params.promotion = filterPromotion;
-      const result = await archiveApi.getAll(params);
-      setArchives(result.data ?? []);
-      setTotal(result.total ?? 0);
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  };
-
+  /* ── Chargements ─────────────────────────────────── */
   const loadArchivedQuizzes = async () => {
     setLoading(true); setError('');
     try {
-      const result = await quizApi.getArchived({ page: quizPage, limit: LIMIT });
-      setArchivedQuizzes(result.data ?? []);
-      setQuizTotal(result.total ?? 0);
+      const r = await quizApi.getArchived({ page: quizPage, limit: LIMIT });
+      setArchivedQuizzes(r.data  ?? []);
+      setQuizTotal(r.total ?? 0);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
@@ -64,193 +37,234 @@ export default function ArchivesAdmin() {
   const loadArchivedContents = async () => {
     setLoading(true); setError('');
     try {
-      const result = await contentApi.getArchived({ page: contentsPage, limit: LIMIT });
-      setArchivedContents(result.data ?? []);
-      setContentsTotal(result.total ?? 0);
+      const r = await contentApi.getArchived({ page: contentsPage, limit: LIMIT });
+      setArchivedContents(r.data  ?? []);
+      setContentsTotal(r.total ?? 0);
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
 
-  useEffect(() => { if (tab === 'fichiers') loadArchives(); }, [page, filterMatiere, filterPromotion, tab]);
-  useEffect(() => { if (tab === 'quiz') loadArchivedQuizzes(); }, [quizPage, tab]);
-  useEffect(() => { if (tab === 'contenus') loadArchivedContents(); }, [contentsPage, tab]);
+  useEffect(() => { if (tab === 'quiz')     loadArchivedQuizzes();   }, [quizPage,     tab]);
+  useEffect(() => { if (tab === 'contenus') loadArchivedContents();  }, [contentsPage, tab]);
 
-  // ── Actions fichiers ──────────────────────────────────
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!uploadForm.file) { setError('Veuillez sélectionner un fichier.'); return; }
-    setLoading(true); setError('');
-    try {
-      await archiveApi.upload(uploadForm.file, uploadForm.matiere, uploadForm.promotion);
-      setNotice('Archive téléversée avec succès.');
-      setUploadOpen(false);
-      setUploadForm({ file: null, matiere: '', promotion: '' });
-      loadArchives();
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
-  };
-
-  const handleViewText = async (id) => {
-    if (textPanel.archiveId === id) { setTextPanel({ archiveId: null, text: '' }); return; }
-    try {
-      const result = await archiveApi.getTexte(id);
-      setTextPanel({ archiveId: id, text: result.texte ?? '' });
-    } catch (err) { alert(err.message); }
-  };
-
-  const handleDeleteArchive = async (id) => {
-    if (!window.confirm('Supprimer cette archive ?')) return;
-    try {
-      await archiveApi.remove(id);
-      if (textPanel.archiveId === id) setTextPanel({ archiveId: null, text: '' });
-      loadArchives();
-    } catch (err) { alert(err.message); }
-  };
-
-  // ── Désarchiver quiz ──────────────────────────────────
-  const handleDesarchiverQuiz = async (id) => {
+  /* ── Actions ─────────────────────────────────────── */
+  const desarchiverQuiz = async (id) => {
     try {
       await quizApi.desarchiver(id);
-      setNotice('Quiz restauré dans "Mes Quiz".');
+      setNotice('Quiz restauré dans "Mes Exercices".');
       loadArchivedQuizzes();
     } catch (err) { alert(err.message); }
   };
 
-  const handleDeleteQuiz = async (id) => {
+  const supprimerQuiz = async (id) => {
     if (!window.confirm('Supprimer définitivement ce quiz archivé ?')) return;
-    try {
-      await quizApi.remove(id);
-      loadArchivedQuizzes();
-    } catch (err) { alert(err.message); }
+    try { await quizApi.remove(id); loadArchivedQuizzes(); }
+    catch (err) { alert(err.message); }
   };
 
-  // ── Désarchiver contenu ───────────────────────────────
-  const handleDesarchiverContent = async (id) => {
+  const desarchiverContent = async (id) => {
     try {
       await contentApi.desarchiver(id);
-      setNotice('Contenu restauré dans "Mes Contenus".');
+      setNotice('Contenu restauré dans "Mes Cours".');
       loadArchivedContents();
     } catch (err) { alert(err.message); }
   };
 
-  const handleDeleteContent = async (id) => {
+  const supprimerContent = async (id) => {
     if (!window.confirm('Supprimer définitivement ce contenu archivé ?')) return;
-    try {
-      await contentApi.remove(id);
-      loadArchivedContents();
-    } catch (err) { alert(err.message); }
+    try { await contentApi.remove(id); loadArchivedContents(); }
+    catch (err) { alert(err.message); }
   };
 
-  const totalPages      = Math.max(1, Math.ceil(total / LIMIT));
-  const quizTotalPages  = Math.max(1, Math.ceil(quizTotal / LIMIT));
-  const contTotalPages  = Math.max(1, Math.ceil(contentsTotal / LIMIT));
+  const quizTotalPages = Math.max(1, Math.ceil(quizTotal     / LIMIT));
+  const contTotalPages = Math.max(1, Math.ceil(contentsTotal / LIMIT));
 
+  /* ── Pagination ─────────────────────────────────── */
+  const Pagination = ({ page, total, onPrev, onNext }) => (
+    total > 1 ? (
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 28, alignItems: 'center' }}>
+        <button className="workspace-button secondary" onClick={onPrev} disabled={page <= 1}>← Précédent</button>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 600 }}>
+          Page {page} / {total}
+        </span>
+        <button className="workspace-button secondary" onClick={onNext} disabled={page >= total}>Suivant →</button>
+      </div>
+    ) : null
+  );
+
+  /* ── Rendu ───────────────────────────────────────── */
   return (
     <DashboardLayout activePage="archives">
+
+      {/* En-tête */}
       <div className="workspace-header">
         <div>
           <span className="dashboard-eyebrow">ARCHIVES</span>
           <h1>Archives</h1>
-          <p>Consultez vos quiz et contenus archivés.</p>
+          <p>Restaurez ou supprimez vos quiz et contenus archivés.</p>
         </div>
       </div>
 
-      {notice && <p className="workspace-notice">{notice}</p>}
-      {error  && <p className="workspace-error">{error}</p>}
+      {/* Messages */}
+      {notice && <div className="workspace-notice" role="status">{notice}</div>}
+      {error  && <div className="workspace-error"  role="alert">{error}</div>}
 
       {/* ── Onglets ── */}
-      <div className="tabs-row">
-        <button className={`tab-btn${tab === 'quiz' ? ' active' : ''}`} onClick={() => setTab('quiz')}>
-          📦 Quiz archivés {quizTotal > 0 && <span className="tab-count">{quizTotal}</span>}
-        </button>
-        <button className={`tab-btn${tab === 'contenus' ? ' active' : ''}`} onClick={() => setTab('contenus')}>
-          📦 Contenus archivés {contentsTotal > 0 && <span className="tab-count">{contentsTotal}</span>}
-        </button>
+      <div style={{
+        display: 'flex', gap: 6, marginBottom: 28,
+        background: 'rgba(255,255,255,0.5)',
+        backdropFilter: 'blur(16px)',
+        border: '1px solid rgba(255,255,255,0.75)',
+        borderRadius: 16, padding: 5,
+        width: 'fit-content',
+      }}>
+        {[
+          { key: 'quiz',     label: 'Quiz archivés',     count: quizTotal      },
+          { key: 'contenus', label: 'Contenus archivés', count: contentsTotal  },
+        ].map(({ key, label, count }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '9px 20px', borderRadius: 12, border: 'none',
+              background: tab === key
+                ? 'linear-gradient(135deg,#2563EB,#4F46E5)'
+                : 'transparent',
+              color: tab === key ? '#fff' : 'var(--text-secondary)',
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              boxShadow: tab === key ? '0 4px 14px rgba(37,99,235,0.3)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            {label}
+            {count > 0 && (
+              <span style={{
+                background: tab === key ? 'rgba(255,255,255,0.25)' : 'rgba(37,99,235,0.12)',
+                color: tab === key ? '#fff' : 'var(--color-primary)',
+                borderRadius: 20, padding: '1px 8px',
+                fontSize: 11, fontWeight: 700,
+              }}>{count}</span>
+            )}
+          </button>
+        ))}
       </div>
 
-      {/* ══════════════════════════════════════════════════ */}
-      {/* ONGLET : QUIZ ARCHIVÉS                             */}
-      {/* ══════════════════════════════════════════════════ */}
-      {tab === 'quiz' && (
+      {/* ── Chargement ── */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)', fontSize: 14 }}>
+          Chargement…
+        </div>
+      )}
+
+      {/* ══════════════════ QUIZ ARCHIVÉS ══════════════════ */}
+      {!loading && tab === 'quiz' && (
         <>
-          {loading && <p>Chargement...</p>}
-          {!loading && archivedQuizzes.length === 0 && (
+          {archivedQuizzes.length === 0 ? (
             <div className="workspace-empty">
-              <span>📦</span>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+                background: 'rgba(37,99,235,0.08)',
+                border: '1px solid rgba(37,99,235,0.14)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: "'Bricolage Grotesque', sans-serif",
+                fontSize: 20, fontWeight: 800, color: 'var(--color-primary)',
+              }}>0</div>
               <h3>Aucun quiz archivé</h3>
-              <p>Les quiz que vous archivez depuis "Mes Quiz" apparaîtront ici.</p>
+              <p>Les quiz archivés depuis "Mes Exercices" apparaîtront ici.</p>
+            </div>
+          ) : (
+            <div className="workspace-cards">
+              {archivedQuizzes.map((q) => (
+                <div key={q.id} className="workspace-card">
+                  <div className="workspace-card-top">
+                    <span className="workspace-badge">{q.matiere}</span>
+                    {q.niveau && <span className="workspace-badge">{q.niveau}</span>}
+                    <span className="workspace-badge" style={{
+                      background: 'rgba(37,99,235,0.08)',
+                      color: 'var(--color-primary)',
+                    }}>Archivé</span>
+                  </div>
+                  <h3>{q.titre}</h3>
+                  {q.theme && <p>{q.theme}</p>}
+                  <small>
+                    Archivé le {q.archivedAt
+                      ? new Date(q.archivedAt).toLocaleDateString('fr-FR')
+                      : '—'}
+                  </small>
+                  <div className="workspace-card-actions">
+                    <button className="restore" onClick={() => desarchiverQuiz(q.id)}>
+                      Restaurer
+                    </button>
+                    <button className="delete" onClick={() => supprimerQuiz(q.id)}>
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-          <div className="workspace-cards">
-            {archivedQuizzes.map((q) => (
-              <div key={q.id} className="workspace-card archived-card">
-                <div className="workspace-card-top">
-                  <span className="workspace-badge">{q.matiere}</span>
-                  <span className="workspace-badge">{q.niveau}</span>
-                  <span className="workspace-badge archived-badge">📦 Archivé</span>
-                </div>
-                <h3>{q.titre}</h3>
-                <p>{q.theme}</p>
-                <small>
-                  Archivé le {q.archivedAt ? new Date(q.archivedAt).toLocaleDateString('fr-FR') : '—'}
-                </small>
-                <div className="workspace-card-actions">
-                  <button onClick={() => handleDesarchiverQuiz(q.id)}>↩ Restaurer</button>
-                  <button className="delete" onClick={() => handleDeleteQuiz(q.id)}>Supprimer définitivement</button>
-                </div>
-              </div>
-            ))}
-          </div>
-          {quizTotalPages > 1 && (
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24, alignItems: 'center' }}>
-              <button className="workspace-button secondary" onClick={() => setQuizPage((p) => Math.max(1, p - 1))} disabled={quizPage <= 1}>← Précédent</button>
-              <span style={{ color: '#69647b', fontSize: 14 }}>Page {quizPage} / {quizTotalPages}</span>
-              <button className="workspace-button secondary" onClick={() => setQuizPage((p) => Math.min(quizTotalPages, p + 1))} disabled={quizPage >= quizTotalPages}>Suivant →</button>
-            </div>
-          )}
+          <Pagination
+            page={quizPage} total={quizTotalPages}
+            onPrev={() => setQuizPage(p => Math.max(1, p - 1))}
+            onNext={() => setQuizPage(p => Math.min(quizTotalPages, p + 1))}
+          />
         </>
       )}
 
-      {/* ══════════════════════════════════════════════════ */}
-      {/* ONGLET : CONTENUS ARCHIVÉS                         */}
-      {/* ══════════════════════════════════════════════════ */}
-      {tab === 'contenus' && (
+      {/* ══════════════════ CONTENUS ARCHIVÉS ══════════════════ */}
+      {!loading && tab === 'contenus' && (
         <>
-          {loading && <p>Chargement...</p>}
-          {!loading && archivedContents.length === 0 && (
+          {archivedContents.length === 0 ? (
             <div className="workspace-empty">
-              <span>📦</span>
+              <div style={{
+                width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+                background: 'rgba(37,99,235,0.08)',
+                border: '1px solid rgba(37,99,235,0.14)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: "'Bricolage Grotesque', sans-serif",
+                fontSize: 20, fontWeight: 800, color: 'var(--color-primary)',
+              }}>0</div>
               <h3>Aucun contenu archivé</h3>
-              <p>Les contenus que vous archivez depuis "Mes Contenus" apparaîtront ici.</p>
+              <p>Les contenus archivés depuis "Mes Cours" apparaîtront ici.</p>
+            </div>
+          ) : (
+            <div className="workspace-cards">
+              {archivedContents.map((c) => (
+                <div key={c.id} className="workspace-card">
+                  <div className="workspace-card-top">
+                    {c.type    && <span className="workspace-badge">{c.type}</span>}
+                    {c.matiere && <span className="workspace-badge">{c.matiere}</span>}
+                    <span className="workspace-badge" style={{
+                      background: 'rgba(37,99,235,0.08)',
+                      color: 'var(--color-primary)',
+                    }}>Archivé</span>
+                  </div>
+                  <h3>{c.titre}</h3>
+                  {c.theme && <p>{c.theme}</p>}
+                  <small>
+                    Archivé le {c.archivedAt
+                      ? new Date(c.archivedAt).toLocaleDateString('fr-FR')
+                      : '—'}
+                  </small>
+                  <div className="workspace-card-actions">
+                    <button className="restore" onClick={() => desarchiverContent(c.id)}>
+                      Restaurer
+                    </button>
+                    <button className="delete" onClick={() => supprimerContent(c.id)}>
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
-          <div className="workspace-cards">
-            {archivedContents.map((c) => (
-              <div key={c.id} className="workspace-card archived-card">
-                <div className="workspace-card-top">
-                  <span className="workspace-badge">{c.type}</span>
-                  <span className="workspace-badge">{c.matiere}</span>
-                  <span className="workspace-badge archived-badge">📦 Archivé</span>
-                </div>
-                <h3>{c.titre}</h3>
-                <p>{c.theme}</p>
-                <small>
-                  Archivé le {c.archivedAt ? new Date(c.archivedAt).toLocaleDateString('fr-FR') : '—'}
-                </small>
-                <div className="workspace-card-actions">
-                  <button onClick={() => handleDesarchiverContent(c.id)}>↩ Restaurer</button>
-                  <button className="delete" onClick={() => handleDeleteContent(c.id)}>Supprimer définitivement</button>
-                </div>
-              </div>
-            ))}
-          </div>
-          {contTotalPages > 1 && (
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 24, alignItems: 'center' }}>
-              <button className="workspace-button secondary" onClick={() => setContentsPage((p) => Math.max(1, p - 1))} disabled={contentsPage <= 1}>← Précédent</button>
-              <span style={{ color: '#69647b', fontSize: 14 }}>Page {contentsPage} / {contTotalPages}</span>
-              <button className="workspace-button secondary" onClick={() => setContentsPage((p) => Math.min(contTotalPages, p + 1))} disabled={contentsPage >= contTotalPages}>Suivant →</button>
-            </div>
-          )}
+          <Pagination
+            page={contentsPage} total={contTotalPages}
+            onPrev={() => setContentsPage(p => Math.max(1, p - 1))}
+            onNext={() => setContentsPage(p => Math.min(contTotalPages, p + 1))}
+          />
         </>
       )}
     </DashboardLayout>

@@ -10,12 +10,22 @@ import { Persist } from './db/persist.js';
 async function bootstrap() {
   const app: any = await NestFactory.create(AppModule);
 
+  // En prod (Docker/nginx), le frontend est servi sur la même origine que l'API.
+  // On autorise les origines localhost pour le dev, et l'origine de FRONTEND_URL pour la prod.
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:4173',
+    process.env.FRONTEND_URL,
+  ].filter(Boolean) as string[];
+
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:4173',
-    ],
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Requêtes sans origine (curl, Postman, même domaine nginx) → autorisées
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS bloqué pour l'origine : ${origin}`));
+    },
     credentials: true,
   });
 
@@ -61,7 +71,7 @@ async function bootstrap() {
       prenom: 'Système',
       email: 'admin@tekup.tn',
       motDePasse: 'admin@1234',
-      role: 'admin',
+      role: 'administrateur',
     } as any);
     console.log('✅ Compte admin créé : admin@tekup.tn / admin@1234');
     await Persist.saveAll(); // CHANGÉ : ajout de await

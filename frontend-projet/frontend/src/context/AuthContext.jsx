@@ -95,6 +95,9 @@ export function AuthProvider({ children }) {
   const logout = () => {
     removeToken();
     setUser(null);
+    // Nettoyage complet du localStorage lié à ExoCraft
+    localStorage.removeItem("exocraft_user");
+    localStorage.removeItem("exocraft_last_payment");
   };
 
   return (

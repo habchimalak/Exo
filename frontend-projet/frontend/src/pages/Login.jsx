@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import logo from "../assets/exocraft-logo.png";
+import ThemeToggle from "../components/ThemeToggle";
 
 function Login() {
   const navigate = useNavigate();
@@ -47,6 +48,7 @@ function Login() {
         <div className="auth-header-text">
           <span>Pas encore de compte ?</span>
           <Link to="/register">Créer un compte</Link>
+          <ThemeToggle />
         </div>
       </header>
 

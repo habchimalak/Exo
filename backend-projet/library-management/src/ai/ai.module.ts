@@ -5,9 +5,10 @@ import { ArchiveModule } from '../archive/archive.module.js';
 import { ContentModule } from '../content/content.module.js';
 import { QuizModule } from '../quiz/quiz.module.js';
 import { PaymentModule } from '../payment/payment.module.js';
+import { GenerationsModule } from '../generations/generations.module.js';
 
 @Module({
-  imports: [ArchiveModule, ContentModule, QuizModule, PaymentModule],
+  imports: [ArchiveModule, ContentModule, QuizModule, PaymentModule, GenerationsModule],
   controllers: [AiController],
   providers: [AiService],
   exports: [AiService],

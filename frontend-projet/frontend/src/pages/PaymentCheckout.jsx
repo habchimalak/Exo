@@ -22,8 +22,10 @@ export default function PaymentCheckout() {
   useEffect(() => {
     if (!token) { navigate("/pricing"); return; }
     try {
-      // base64url → utf8 → "userId:packId:timestamp:sig"
-      const decoded = atob(token.replace(/-/g, "+").replace(/_/g, "/"));
+      // base64url → base64 standard (ajouter le padding manquant)
+      const base64 = token.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+      const decoded = atob(padded);
       const packId  = decoded.split(":")[1];
       setPack(PACKS[packId] ?? null);
     } catch {

@@ -76,6 +76,20 @@ export const authApi = {
     return data;
   },
 
+  // POST /api/auth/send-otp { email }
+  sendOtp: (email) =>
+    apiRequest("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  // POST /api/auth/verify-otp { email, code }
+  verifyOtp: (email, code) =>
+    apiRequest("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email, code }),
+    }),
+
   logout: () => removeToken(),
   isAuthenticated: () => !!getToken(),
 };

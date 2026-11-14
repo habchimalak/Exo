@@ -1,0 +1,140 @@
+/* ============================================================
+   EXOCRAFT — DESIGN TOKENS  (home page)
+   tokens.css · importé uniquement dans home.jsx
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+/* ── Light (défaut) ──────────────────────────────────────── */
+:root {
+  /* Fonds */
+  --home-bg-start:      #DCEBFF;
+  --home-bg-mid1:       #C9D6FF;
+  --home-bg-mid2:       #D4F1FF;
+  --home-bg-end:        #F6F9FF;
+
+  /* Textes */
+  --home-text:          #0B1B4D;
+  --home-text-2:        #4A5A8C;
+  --home-text-3:        #7A88B8;
+
+  /* Accents */
+  --home-blue:          #2563EB;
+  --home-blue-dark:     #1D4ED8;
+  --home-indigo:        #4F46E5;
+  --home-cyan:          #06B6D4;
+  --home-cyan-dark:     #0891B2;
+
+  /* Boutons */
+  --home-btn-bg:        linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+  --home-btn-shadow:    0 4px 20px rgba(37,99,235,0.35);
+  --home-btn-shadow-hover: 0 8px 32px rgba(37,99,235,0.55);
+
+  /* Glass */
+  --home-glass-bg:      rgba(255,255,255,0.60);
+  --home-glass-border:  rgba(255,255,255,0.75);
+  --home-glass-shadow:  0 4px 24px rgba(37,99,235,0.08);
+
+  /* Dégradé texte */
+  --home-grad-text:     linear-gradient(135deg, #2563EB 0%, #06B6D4 100%);
+
+  /* Blobs */
+  --home-blob1:         rgba(37,99,235,0.18);
+  --home-blob2:         rgba(79,70,229,0.14);
+  --home-blob3:         rgba(6,182,212,0.12);
+  --home-blob4:         rgba(37,99,235,0.08);
+
+  /* Navbar */
+  --home-nav-bg:        rgba(246,249,255,0.80);
+  --home-nav-border:    rgba(255,255,255,0.75);
+
+  /* Rayons */
+  --r-sm: 12px;
+  --r-md: 20px;
+  --r-lg: 28px;
+
+  /* Ombres */
+  --shadow-1: 0 2px 8px rgba(11,27,77,0.06);
+  --shadow-2: 0 8px 32px rgba(11,27,77,0.10);
+  --shadow-3: 0 20px 60px rgba(11,27,77,0.14);
+}
+
+/* ── Dark ────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --home-bg-start:      #070B1A;
+  --home-bg-mid1:       #0B1330;
+  --home-bg-mid2:       #0D1535;
+  --home-bg-end:        #070B1A;
+
+  --home-text:          #E8EEFF;
+  --home-text-2:        #9AA8D6;
+  --home-text-3:        #6070A8;
+
+  --home-blue:          #3B82F6;
+  --home-blue-dark:     #2563EB;
+  --home-indigo:        #818CF8;
+  --home-cyan:          #22D3EE;
+  --home-cyan-dark:     #06B6D4;
+
+  --home-btn-bg:        linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
+  --home-btn-shadow:    0 4px 20px rgba(37,99,235,0.45);
+  --home-btn-shadow-hover: 0 8px 32px rgba(37,99,235,0.70);
+
+  --home-glass-bg:      rgba(255,255,255,0.05);
+  --home-glass-border:  rgba(255,255,255,0.10);
+  --home-glass-shadow:  0 4px 24px rgba(0,0,0,0.30);
+
+  --home-grad-text:     linear-gradient(135deg, #60A5FA 0%, #22D3EE 100%);
+
+  --home-blob1:         rgba(37,99,235,0.14);
+  --home-blob2:         rgba(79,70,229,0.10);
+  --home-blob3:         rgba(6,182,212,0.10);
+  --home-blob4:         rgba(37,99,235,0.06);
+
+  --home-nav-bg:        rgba(7,11,26,0.85);
+  --home-nav-border:    rgba(255,255,255,0.10);
+
+  --shadow-1: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-2: 0 8px 32px rgba(0,0,0,0.35);
+  --shadow-3: 0 20px 60px rgba(0,0,0,0.50);
+}
+
+/* ── Utilitaires home ────────────────────────────────────── */
+.home-wrap { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--home-text); }
+.home-wrap *, .home-wrap *::before, .home-wrap *::after { box-sizing: border-box; }
+
+/* Gradient text helper */
+.home-grad {
+  background: var(--home-grad-text);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Section label */
+.home-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--home-blue);
+  margin-bottom: 16px;
+}
+
+/* Scroll reveal */
+.sr { opacity: 0; transform: translateY(16px); transition: opacity 0.6s cubic-bezier(.22,1,.36,1), transform 0.6s cubic-bezier(.22,1,.36,1); }
+.sr.visible { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .sr { opacity: 1 !important; transform: none !important; transition: none !important; } }
+
+/* Noise overlay */
+.home-noise::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}

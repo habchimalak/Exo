@@ -336,7 +336,7 @@ export default function Promos() {
                       const isSelected = selectedPromo?.id === p.id
                       return (
                         <div key={p.id} onClick={() => setSelectedPromo(isSelected ? null : p)}
-                          style={{ background: isSelected ? '#f5f3ff' : '#fff', border: `1.5px solid ${isSelected ? '#5b4fcf' : '#e0e2f0'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.15s' }}>
+                          style={{ background: isSelected ? '#f5f3ff' : '#fff', border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.15s' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                             <div style={{ flex: 1, overflow: 'hidden' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -344,7 +344,7 @@ export default function Promos() {
                                 <span style={{ fontSize: 10, background: '#f5f5f5', color: '#8888aa', padding: '1px 6px', borderRadius: 4 }}>{p.semestre}</span>
                                 {p.specialite && <span style={{ fontSize: 10, background: sc + '18', color: sc, padding: '1px 8px', borderRadius: 4, fontWeight: 700 }}>{p.specialite}</span>}
                               </div>
-                              <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? '#5b4fcf' : '#1a1a3e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</div>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? 'var(--accent)' : '#1a1a3e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nom}</div>
                               <div style={{ fontSize: 11, color: '#8888aa', marginTop: 3 }}>{(p.matieres || []).length} matière{(p.matieres || []).length !== 1 ? 's' : ''}</div>
                             </div>
                             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>

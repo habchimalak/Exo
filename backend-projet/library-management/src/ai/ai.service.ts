@@ -10,6 +10,7 @@ import { ChatDto } from './dto/chat.dto.js';
 import { ArchiveService } from '../archive/archive.service.js';
 import { ContentService } from '../content/content.service.js';
 import { QuizService } from '../quiz/quiz.service.js';
+import { GenerationsService } from '../generations/generations.service.js';
 import { Content } from '../content/entities/content.entity.js';
 import { Quiz } from '../quiz/entities/quiz.entity.js';
 import { NiveauQuiz, VisibiliteQuiz } from '../quiz/dto/create-quiz.dto.js';
@@ -27,6 +28,7 @@ export class AiService {
     private readonly archiveService: ArchiveService,
     private readonly contentService: ContentService,
     private readonly quizService: QuizService,
+    private readonly generationsService: GenerationsService,
   ) {
     this.client = new OpenAI({
       apiKey: this.configService.getOrThrow<string>('OPENROUTER_API_KEY'),
@@ -47,7 +49,7 @@ export class AiService {
   // GÉNÉRATION PRINCIPALE
   // ─────────────────────────────────────────────────────
 
-  async generate(dto: GenerateContentDto): Promise<{ contenu: string }> {
+  async generate(dto: GenerateContentDto, userId?: number): Promise<{ contenu: string }> {
     const prompt = this.buildPrompt(dto);
 
     try {
@@ -61,6 +63,10 @@ export class AiService {
       });
 
       const contenu = response.choices[0]?.message?.content ?? '';
+      // Enregistrer la génération dans les stats
+      if (userId) {
+        this.generationsService.record(userId, dto.type, dto.matiere);
+      }
       return { contenu };
     } catch (error) {
       throw new InternalServerErrorException(
@@ -76,6 +82,7 @@ export class AiService {
   async generateFromArchive(
     archiveId: number,
     dto: Omit<GenerateContentDto, 'courseFourni' | 'matiere'>,
+    userId?: number,
   ): Promise<{ contenu: string }> {
     const { texte, matiere } = this.archiveService.getTexte(archiveId);
 
@@ -84,7 +91,7 @@ export class AiService {
       ...dto,
       matiere,
       courseFourni: texte.substring(0, 4000), // limite pour ne pas dépasser le contexte
-    } as GenerateContentDto);
+    } as GenerateContentDto, userId);
   }
 
   // ─────────────────────────────────────────────────────
@@ -185,7 +192,7 @@ export class AiService {
   // CHAT LIBRE AVEC L'IA
   // ─────────────────────────────────────────────────────
 
-  async chat(dto: ChatDto): Promise<{ reponse: string }> {
+  async chat(dto: ChatDto, userId?: number): Promise<{ reponse: string }> {
     // Construire les messages : système + historique + message actuel
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       {
@@ -215,6 +222,10 @@ Si on te demande de générer du contenu pédagogique, tu le fais directement.`,
       });
 
       const reponse = response.choices[0]?.message?.content ?? '';
+      // Enregistrer la génération chat dans les stats
+      if (userId) {
+        this.generationsService.record(userId, 'chat', 'chat');
+      }
       return { reponse };
     } catch (error) {
       throw new InternalServerErrorException(

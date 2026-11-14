@@ -5,7 +5,7 @@ import { useEtab } from '../../context/EtablissementContext'
 const TYPE_LABELS = { cours: 'Cours', examen: 'Examen', exercice: 'Exercice', resume: 'Résumé' }
 const TYPE_COLORS = { cours: 'badge-blue', examen: 'badge-red', exercice: 'badge-yellow', resume: 'badge-green' }
 const FORMAT_COLORS = { PDF: 'badge-red', Word: 'badge-blue' }
-const ACCENT = ['#6c5ce7','#4a90e2','#00b894','#f39c12','#e17055','#a29bfe','#fd79a8']
+const ACCENT = ['#2563EB','#06B6D4','#059669','#D97706','#7C3AED','#4F46E5']
 
 export default function Matieres() {
   const { promos, reload: reloadContext } = useEtab()
@@ -62,9 +62,9 @@ export default function Matieres() {
 
   function getNiveauColor(ids) {
     const p = promos.find(pr => (ids || []).includes(pr.id))
-    if (!p) return '#9090b0'
-    const colors = { '1ere': '#6c5ce7', '2eme': '#4a90e2', '3eme': '#00b894', '4eme': '#f39c12', '5eme': '#e17055' }
-    return colors[p.niveau] ?? '#6c5ce7'
+    if (!p) return 'var(--text-muted)'
+    const colors = { '1ere': 'var(--accent)', '2eme': '#4a90e2', '3eme': '#059669', '4eme': '#D97706', '5eme': '#EF4444' }
+    return colors[p.niveau] ?? 'var(--accent)'
   }
 
   function openCreateMatiere() {
@@ -200,7 +200,7 @@ export default function Matieres() {
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
           <div className="search-bar" style={{ flex: 1 }}>
-            <i className="search-icon" style={{ fontStyle: 'normal' }}>&#128269;</i>
+            <i className="search-icon" style={{ fontStyle: 'normal', fontSize: 11 }}>&#9679;</i>
             <input className="input" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select className="input" style={{ width: 160 }} value={filterPromo} onChange={e => setFilterPromo(e.target.value)}>
@@ -210,12 +210,12 @@ export default function Matieres() {
         </div>
 
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#8888aa' }}>Chargement...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Chargement...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filtered.length === 0 ? (
               <div className="empty-state" style={{ padding: 30 }}>
-                <div className="empty-icon" style={{ fontWeight: 800, fontSize: 24 }}>M</div>
+                <div className="empty-icon" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", fontWeight: 800, fontSize: 22, color: 'var(--accent)', opacity: 0.3 }}>M</div>
                 <div>Aucune matière trouvée</div>
               </div>
             ) : filtered.map((m, i) => {
@@ -223,22 +223,22 @@ export default function Matieres() {
               const isSelected = selectedMatiere?.id === m.id
               return (
                 <div key={m.id} onClick={() => setSelectedMatiere(isSelected ? null : m)}
-                  style={{ background: isSelected ? '#f5f3ff' : '#fff', border: `1.5px solid ${isSelected ? '#6c5ce7' : '#e4e6f0'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  style={{ background: isSelected ? 'rgba(37,99,235,0.06)' : '#fff', border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 38, height: 38, borderRadius: 8, flexShrink: 0, background: ACCENT[i % ACCENT.length] + '20', color: ACCENT[i % ACCENT.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15 }}>
                     {m.nom.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? '#6c5ce7' : '#1a1a2e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.nom}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: isSelected ? 'var(--accent)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.nom}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
                       {(m.promoIds || []).length === 0 ? (
-                        <span style={{ fontSize: 10, color: '#e17055', background: '#fff0ee', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>Aucun niveau</span>
+                        <span style={{ fontSize: 10, color: '#EF4444', background: '#fff0ee', padding: '1px 6px', borderRadius: 4, fontWeight: 600 }}>Aucun niveau</span>
                       ) : (
                         getPromoNames(m.promoIds).slice(0, 2).map((nom, j) => (
                           <span key={j} style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4, background: niveauColor + '18', color: niveauColor }}>{nom}</span>
                         ))
                       )}
-                      {(m.promoIds || []).length > 2 && <span style={{ fontSize: 10, color: '#9090b0' }}>+{m.promoIds.length - 2}</span>}
-                      <span style={{ fontSize: 10, color: '#9090b0' }}>· {(m.documents || []).length} doc{(m.documents || []).length !== 1 ? 's' : ''}</span>
+                      {(m.promoIds || []).length > 2 && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>+{m.promoIds.length - 2}</span>}
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>· {(m.documents || []).length} doc{(m.documents || []).length !== 1 ? 's' : ''}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
@@ -258,14 +258,14 @@ export default function Matieres() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <button onClick={() => setSelectedMatiere(null)} style={{ background: '#f0f2f8', border: '1px solid #e4e6f0', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 12, color: '#4a4a6a', fontWeight: 500 }}>← Retour</button>
-                <div style={{ fontWeight: 800, fontSize: 18, color: '#1a1a2e' }}>{selectedMatiere.nom}</div>
+                <button onClick={() => setSelectedMatiere(null)} style={{ background: 'rgba(37,99,235,0.07)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500 }}>← Retour</button>
+                <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--text-primary)' }}>{selectedMatiere.nom}</div>
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {getPromoNames(selectedMatiere.promoIds).map((nom, i) => (
                   <span key={i} style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: getNiveauColor(selectedMatiere.promoIds) + '18', color: getNiveauColor(selectedMatiere.promoIds) }}>{nom}</span>
                 ))}
-                <span style={{ fontSize: 11, color: '#9090b0', alignSelf: 'center' }}>· {(selectedMatiere.documents || []).length} document{(selectedMatiere.documents || []).length !== 1 ? 's' : ''}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>· {(selectedMatiere.documents || []).length} document{(selectedMatiere.documents || []).length !== 1 ? 's' : ''}</span>
               </div>
             </div>
             <button className="btn btn-primary" onClick={openAddDoc}>+ Ajouter un document</button>
@@ -274,7 +274,7 @@ export default function Matieres() {
           {(selectedMatiere.documents || []).length === 0 ? (
             <div className="card">
               <div className="empty-state">
-                <div style={{ fontSize: 36, color: '#6c5ce7', opacity: 0.25, fontWeight: 800, marginBottom: 12 }}>DOC</div>
+                <div style={{ fontSize: 36, color: 'var(--accent)', opacity: 0.25, fontWeight: 800, marginBottom: 12 }}>DOC</div>
                 <div style={{ fontWeight: 600 }}>Aucun document pour cette matière</div>
                 <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={openAddDoc}>+ Ajouter le premier document</button>
               </div>
@@ -291,13 +291,13 @@ export default function Matieres() {
                   {(selectedMatiere.documents || []).map(doc => (
                     <tr key={doc.id}>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 13 }}>{doc.titre}</div>
-                        <div style={{ fontSize: 11, color: '#9090b0', marginTop: 2 }}>{doc.fileName} · {doc.size}</div>
+                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{doc.titre}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{doc.fileName} · {doc.size}</div>
                       </td>
                       <td><span className={`badge ${TYPE_COLORS[doc.type] || 'badge-blue'}`}>{TYPE_LABELS[doc.type] || doc.type}</span></td>
                       <td><span className={`badge ${FORMAT_COLORS[doc.format] || 'badge-gray'}`}>{doc.format}</span></td>
-                      <td style={{ fontSize: 12, color: '#4a4a6a' }}>{doc.promo}</td>
-                      <td style={{ fontSize: 12, color: '#9090b0' }}>{new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}</td>
+                      <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{doc.promo}</td>
+                      <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button className="btn-icon" style={{ padding: '5px 10px', fontSize: 11 }} onClick={() => downloadDoc(selectedMatiere.id, doc.id)}>⬇ Télécharger</button>
@@ -329,20 +329,20 @@ export default function Matieres() {
             </div>
             <div className="form-group">
               <label className="form-label">Niveau(x) associé(s) ({matiereForm.promoIds.length} sélectionné{matiereForm.promoIds.length > 1 ? 's' : ''})</label>
-              <div style={{ border: '1.5px solid #e4e6f0', borderRadius: 8, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+              <div style={{ border: '1.5px solid var(--border)', borderRadius: 8, overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
                 {promos.length === 0 ? (
-                  <div style={{ padding: '10px 12px', color: '#e67e22', fontSize: 12 }}>Aucune promotion disponible</div>
+                  <div style={{ padding: '10px 12px', color: '#D97706', fontSize: 12 }}>Aucune promotion disponible</div>
                 ) : promos.map((p, i) => {
                   const checked = matiereForm.promoIds.includes(p.id)
-                  const colors = { '1ere': '#6c5ce7', '2eme': '#4a90e2', '3eme': '#00b894', '4eme': '#f39c12', '5eme': '#e17055' }
-                  const col = colors[p.niveau] ?? '#6c5ce7'
+                  const colors = { '1ere': 'var(--accent)', '2eme': '#4a90e2', '3eme': '#059669', '4eme': '#D97706', '5eme': '#EF4444' }
+                  const col = colors[p.niveau] ?? 'var(--accent)'
                   return (
                     <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', cursor: 'pointer', background: checked ? col + '0d' : i % 2 === 0 ? '#fff' : '#fafbff', borderBottom: i < promos.length - 1 ? '1px solid #f0f2f8' : 'none' }}>
                       <input type="checkbox" checked={checked} onChange={() => setMatiereForm(f => ({ ...f, promoIds: checked ? f.promoIds.filter(x => x !== p.id) : [...f.promoIds, p.id] }))} style={{ accentColor: col, width: 15, height: 15, flexShrink: 0 }} />
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: col, flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: checked ? 600 : 400, fontSize: 13, color: checked ? col : '#1a1a2e' }}>{p.nom}</div>
-                        <div style={{ fontSize: 10, color: '#9090b0' }}><span style={{ fontFamily: 'monospace', background: '#f0f2f8', padding: '0 4px', borderRadius: 3 }}>{p.code}</span></div>
+                        <div style={{ fontWeight: checked ? 600 : 400, fontSize: 13, color: checked ? col : 'var(--text-primary)' }}>{p.nom}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}><span style={{ fontFamily: 'monospace', background: 'rgba(37,99,235,0.07)', padding: '0 4px', borderRadius: 3 }}>{p.code}</span></div>
                       </div>
                       {checked && <span style={{ fontSize: 12, color: col, fontWeight: 700 }}>✓</span>}
                     </label>
@@ -367,7 +367,7 @@ export default function Matieres() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700 }}>{editDoc ? 'Modifier le document' : 'Ajouter un document'}</div>
-                <div style={{ fontSize: 12, color: '#9090b0', marginTop: 2 }}>{selectedMatiere?.nom}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{selectedMatiere?.nom}</div>
               </div>
               <button className="btn-icon" onClick={() => setShowDocModal(false)}>X</button>
             </div>
@@ -377,20 +377,20 @@ export default function Matieres() {
               <div className="upload-zone">
                 {docFileName ? (
                   <div className="file-info">
-                    <div style={{ width: 36, height: 36, borderRadius: 8, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: '#6c5ce7' }}>{docFileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC'}</span>
+                    <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(37,99,235,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent)' }}>{docFileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOC'}</span>
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, color: '#1a1a2e', fontSize: 13 }}>{docFileName}</div>
-                      <div style={{ color: '#00b894', fontSize: 12, marginTop: 2 }}>{docFile ? 'Nouveau fichier sélectionné ✓' : 'Fichier existant'}</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{docFileName}</div>
+                      <div style={{ color: '#059669', fontSize: 12, marginTop: 2 }}>{docFile ? 'Nouveau fichier sélectionné ✓' : 'Fichier existant'}</div>
                     </div>
-                    <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9090b0' }}>Changer</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-muted)' }}>Changer</span>
                   </div>
                 ) : (
                   <div>
-                    <div style={{ fontSize: 24, fontWeight: 800, color: '#6c5ce7', opacity: 0.35, marginBottom: 8 }}>PDF / DOC</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent)', opacity: 0.35, marginBottom: 8 }}>PDF / DOC</div>
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Cliquer pour sélectionner</div>
-                    <div style={{ fontSize: 11, color: '#9090b0' }}>PDF, Word (.docx) — max 20 Mo</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>PDF, Word (.docx) — max 20 Mo</div>
                   </div>
                 )}
               </div>
@@ -422,7 +422,7 @@ export default function Matieres() {
               <select className="input" value={docForm.promo} onChange={e => setDocForm(f => ({ ...f, promo: e.target.value }))}>
                 <option value="">— Choisir —</option>
                 {promos.filter(p => (selectedMatiere?.promoIds || []).includes(p.id)).map(p => <option key={p.id} value={p.nom}>{p.nom}</option>)}
-                {promos.filter(p => !(selectedMatiere?.promoIds || []).includes(p.id)).map(p => <option key={p.id} value={p.nom} style={{ color: '#9090b0' }}>{p.nom}</option>)}
+                {promos.filter(p => !(selectedMatiere?.promoIds || []).includes(p.id)).map(p => <option key={p.id} value={p.nom} style={{ color: 'var(--text-muted)' }}>{p.nom}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>

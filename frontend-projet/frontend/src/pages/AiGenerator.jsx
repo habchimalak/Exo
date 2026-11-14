@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import DashboardLayout from "../components/DashboardLayout";
 import { useAuth, defaultGroups } from "../context/AuthContext";
-import { aiApi, exportApi } from "../services/api";
+import { aiApi, exportApi, paymentApi } from "../services/api";
 import useMatieres from "../hooks/useMatieres";
 
 const CONTENT_TYPES = [
@@ -18,6 +18,111 @@ const NIVEAUX = [
   { value: "intermediaire", label: "Intermédiaire" },
   { value: "avance",        label: "Avancé" },
 ];
+
+// ── Compteur crédits IA ──────────────────────────────────────────────────────
+function CreditsCounter({ credits, loading }) {
+  if (loading) return null;
+
+  const pct = credits === null ? 0 : Math.min(100, (credits / 50) * 100); // 50 = quota de référence
+  const isEmpty  = credits === 0;
+  const isLow    = credits > 0 && credits <= 5;
+  const isOk     = credits > 5;
+
+  const color = isEmpty ? "#EF4444" : isLow ? "#F59E0B" : "#2563EB";
+  const bgColor = isEmpty
+    ? "rgba(239,68,68,0.08)"
+    : isLow
+    ? "rgba(245,158,11,0.08)"
+    : "rgba(37,99,235,0.07)";
+  const borderColor = isEmpty
+    ? "rgba(239,68,68,0.25)"
+    : isLow
+    ? "rgba(245,158,11,0.25)"
+    : "rgba(37,99,235,0.18)";
+
+  return (
+    <div style={{
+      background: bgColor,
+      border: `1px solid ${borderColor}`,
+      borderRadius: 16, padding: "16px 20px",
+      marginBottom: 24,
+      display: "flex", alignItems: "center", gap: 16,
+      backdropFilter: "blur(12px)",
+    }}>
+      {/* Icône / pastille */}
+      <div style={{
+        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+        background: isEmpty
+          ? "rgba(239,68,68,0.12)"
+          : isLow
+          ? "rgba(245,158,11,0.12)"
+          : "rgba(37,99,235,0.12)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontWeight: 900, fontSize: 18, color,
+      }}>
+        {isEmpty ? "0" : credits}
+      </div>
+
+      {/* Texte + barre */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
+          <span style={{
+            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontSize: 20, fontWeight: 800, color,
+          }}>
+            {credits ?? "—"} crédit{credits !== 1 ? "s" : ""}
+          </span>
+          <span style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600 }}>
+            disponible{credits !== 1 ? "s" : ""} pour la génération IA
+          </span>
+        </div>
+
+        {/* Barre de progression */}
+        <div style={{
+          height: 6, borderRadius: 4,
+          background: "rgba(0,0,0,0.08)",
+          overflow: "hidden",
+        }}>
+          <div style={{
+            height: "100%", borderRadius: 4,
+            width: `${pct}%`,
+            background: isEmpty
+              ? "#EF4444"
+              : isLow
+              ? "linear-gradient(90deg,#F59E0B,#EF4444)"
+              : "linear-gradient(90deg,#2563EB,#06B6D4)",
+            transition: "width 0.6s cubic-bezier(.22,1,.36,1)",
+          }} />
+        </div>
+
+        {/* Message état */}
+        <div style={{ marginTop: 5, fontSize: 12, color, fontWeight: 600 }}>
+          {isEmpty && "Plus de crédits — rechargez pour continuer à générer."}
+          {isLow  && `Attention : il ne vous reste que ${credits} crédit${credits > 1 ? "s" : ""}.`}
+          {isOk   && `Chaque génération consomme 1 crédit.`}
+        </div>
+      </div>
+
+      {/* Bouton recharger */}
+      {(isEmpty || isLow) && (
+        <a href="/pricing" style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "9px 18px", borderRadius: 10, border: "none",
+          background: color === "#EF4444"
+            ? "linear-gradient(135deg,#EF4444,#F87171)"
+            : "linear-gradient(135deg,#F59E0B,#FBBF24)",
+          color: "#fff", fontWeight: 700, fontSize: 12,
+          textDecoration: "none", flexShrink: 0,
+          boxShadow: `0 4px 14px ${color}40`,
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}>
+          Recharger →
+        </a>
+      )}
+    </div>
+  );
+}
 
 // ── Chat IA ──────────────────────────────────────────────────────────────────
 function AiChat() {
@@ -188,6 +293,17 @@ function AiGeneratorForm() {
   const [extractedFileName, setExtractedFileName] = useState("");
   const fileInputRef = useRef(null);
 
+  // ── Crédits ──
+  const [credits, setCredits]       = useState(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+
+  useEffect(() => {
+    paymentApi.myCredits()
+      .then(d => setCredits(d.credits))
+      .catch(() => setCredits(null))
+      .finally(() => setCreditsLoading(false));
+  }, []);
+
   const update = (e) => setForm((cur) => ({ ...cur, [e.target.name]: e.target.value }));
 
   // Upload et extraction de texte depuis PDF/Word
@@ -238,6 +354,8 @@ function AiGeneratorForm() {
       const data = archiveId ? await aiApi.generateFromArchive(archiveId, payload) : await aiApi.generate(payload);
       setGenerated(data.contenu);
       setEdited(data.contenu);
+      // Décrémenter le compteur local
+      setCredits(prev => (prev !== null && prev > 0 ? prev - 1 : prev));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -293,6 +411,9 @@ function AiGeneratorForm() {
         </div>
       )}
 
+      {/* Compteur crédits */}
+      <CreditsCounter credits={credits} loading={creditsLoading} />
+
       <form className="ai-generator-form" onSubmit={handleGenerate}>
 
         {/* Sélecteur de type */}
@@ -311,12 +432,7 @@ function AiGeneratorForm() {
           <div className="form-group">
             <label htmlFor="matiere">Matière *</label>
             {mesMatieres.length > 0 ? (
-              <select id="matiere" name="matiere" value={form.matiere} onChange={update} required
-                style={{
-                  width: '100%', padding: '11px 13px', border: '1px solid #dcd9e7',
-                  borderRadius: 9, background: '#fff', color: form.matiere ? '#292642' : '#aaa8b7',
-                  font: 'inherit', fontSize: 14, outline: 'none', cursor: 'pointer',
-                }}>
+              <select id="matiere" name="matiere" value={form.matiere} onChange={update} required>
                 <option value="">— Choisir une matière —</option>
                 {mesMatieres.map(m => (
                   <option key={m} value={m}>{m}</option>
@@ -338,14 +454,9 @@ function AiGeneratorForm() {
         {mesPromos.length > 0 && (
           <div className="form-group">
             <label htmlFor="classe">
-              Classe <small style={{ fontWeight: 400, color: '#aaa8b7' }}>(optionnel)</small>
+              Classe <small style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</small>
             </label>
-            <select id="classe" name="classe" value={form.classe} onChange={update}
-              style={{
-                width: '100%', padding: '11px 13px', border: '1px solid #dcd9e7',
-                borderRadius: 9, background: '#fff', color: form.classe ? '#292642' : '#aaa8b7',
-                font: 'inherit', fontSize: 14, outline: 'none', cursor: 'pointer',
-              }}>
+            <select id="classe" name="classe" value={form.classe} onChange={update}>
               <option value="">— Choisir une classe —</option>
               {mesPromos.map(p => (
                 <option key={p} value={p}>{p}</option>
@@ -364,12 +475,7 @@ function AiGeneratorForm() {
             </div>
             <div className="form-group">
               <label htmlFor="niveau">Niveau</label>
-              <select id="niveau" name="niveau" value={form.niveau} onChange={update} style={{
-                width: '100%', padding: '13px 15px', border: '1.5px solid #e2e0ed',
-                borderRadius: 10, fontSize: 14, background: '#fcfcff',
-                color: '#1a1730', outline: 'none', cursor: 'pointer',
-                transition: 'border-color .2s ease, box-shadow .2s ease',
-              }}>
+              <select id="niveau" name="niveau" value={form.niveau} onChange={update}>
                 {NIVEAUX.map((n) => <option key={n.value} value={n.value}>{n.label}</option>)}
               </select>
             </div>
@@ -392,7 +498,7 @@ function AiGeneratorForm() {
 
         {/* Cours fourni */}
         <div className="form-group">
-          <label htmlFor="courseFourni">
+            <label htmlFor="courseFourni">
             Cours existant <small>(optionnel — si vide, l'IA génère depuis le thème)</small>
           </label>
 
@@ -400,23 +506,15 @@ function AiGeneratorForm() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <button
               type="button"
+              className="ai-upload-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={extracting}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 16px', borderRadius: 8, border: '1.5px dashed #6252ed',
-                background: '#f5f3ff', color: '#6252ed', fontWeight: 600,
-                fontSize: 13, cursor: 'pointer', transition: 'all 0.2s',
-              }}
             >
               {extracting ? "⏳ Extraction..." : "📎 Importer un PDF ou Word"}
             </button>
             {extractedFileName && (
-              <span style={{ fontSize: 12, color: '#00b894', fontWeight: 600 }}>
-                ✓ {extractedFileName}
-              </span>
+              <span className="ai-upload-success">✓ {extractedFileName}</span>
             )}
-            {form.courseFourni && !extractedFileName && null}
             <input
               ref={fileInputRef}
               type="file"
@@ -429,20 +527,13 @@ function AiGeneratorForm() {
           <textarea id="courseFourni" name="courseFourni" value={form.courseFourni} onChange={update}
             rows={form.courseFourni ? 14 : 4}
             placeholder="Collez ici le contenu d'un cours existant, ou importez un PDF/Word ci-dessus..."
-            style={{
-              width: '100%', padding: '11px 13px', border: '1px solid #dcd9e7',
-              borderRadius: 9, background: '#fff', color: '#292642',
-              font: 'inherit', fontSize: 14, lineHeight: 1.7,
-              resize: 'vertical', outline: 'none',
-              transition: 'height 0.3s ease',
-            }}
           />
         </div>
 
         {error && <p className="workspace-error" role="alert">{error}</p>}
 
-        <button type="submit" className="workspace-button ai-generate-btn" disabled={loading}>
-          {loading ? "⏳ Génération en cours..." : "✨ Générer avec l'IA"}
+        <button type="submit" className="workspace-button ai-generate-btn" disabled={loading || credits === 0}>
+          {loading ? "Génération en cours..." : credits === 0 ? "Plus de crédits disponibles" : "Générer avec l'IA"}
         </button>
       </form>
 
@@ -481,8 +572,8 @@ function AiGeneratorForm() {
             <div className="workspace-notice" role="status">
               <p>{success}</p>
               {["quiz", "serie", "examen"].includes(form.type)
-                ? <a href="/quiz" className="workspace-button secondary" style={{display:"inline-block",marginTop:"8px"}}>→ Aller à Mes Exercices</a>
-                : <a href="/contents" className="workspace-button secondary" style={{display:"inline-block",marginTop:"8px"}}>→ Aller à Mes Cours</a>
+                ? <a href="/quiz" className="workspace-button secondary" style={{ display: "inline-block", marginTop: 8 }}>→ Aller à Mes Exercices</a>
+                : <a href="/contents" className="workspace-button secondary" style={{ display: "inline-block", marginTop: 8 }}>→ Aller à Mes Cours</a>
               }
             </div>
           )}
@@ -496,7 +587,9 @@ function AiGeneratorForm() {
 export default function AiGenerator() {
   const { user } = useAuth();
   const groups = user?.associations?.length ? user.associations : defaultGroups();
-  const [tab, setTab] = useState("generate");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") === "chat" ? "chat" : "generate";
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <DashboardLayout activePage="ai" groups={groups}>
