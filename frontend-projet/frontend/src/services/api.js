@@ -1,7 +1,9 @@
 // ─── Base URL ────────────────────────────────────────────────────────────────
-// Grâce au proxy Vite, on utilise un chemin relatif en dev
-// En production, pointer vers l'URL réelle du backend
-const API_URL = "/api";
+// En dev  : proxy Vite → localhost:3000  →  chemin relatif /api
+// En prod : VITE_API_URL défini dans Vercel → https://xxxx.up.railway.app/api
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : "/api";
 
 // ─── Token JWT ───────────────────────────────────────────────────────────────
 function getToken() {

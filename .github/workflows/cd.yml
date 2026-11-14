@@ -1,129 +1,133 @@
-name: CD — Docker Build & Deploy
+name: CD — Deploy (Railway + Vercel)
 
+# Se déclenche uniquement après que le CI soit passé sur master
 on:
-  # Se déclenche uniquement après que le CI soit passé sur master
   workflow_run:
     workflows: ["CI — Tests & Build"]
     types: [completed]
     branches: [master]
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ─────────────────────────────────────────────────────────────────
   # Condition : on déploie seulement si le CI a réussi
   # ─────────────────────────────────────────────────────────────────
-  check:
-    name: Vérifier le CI
+  guard:
+    name: CI réussi ?
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: ${{ steps.check.outputs.result }}
+      ok: ${{ steps.result.outputs.ok }}
     steps:
-      - id: check
+      - id: result
         run: |
           if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
-            echo "result=true" >> $GITHUB_OUTPUT
+            echo "ok=true"  >> $GITHUB_OUTPUT
           else
-            echo "result=false" >> $GITHUB_OUTPUT
+            echo "ok=false" >> $GITHUB_OUTPUT
+            echo "⛔ CI échoué — déploiement annulé."
           fi
 
   # ─────────────────────────────────────────────────────────────────
-  # JOB 1 — Build & push images Docker sur GitHub Container Registry
+  # JOB 1 — Backend → Railway
+  # Railway détecte automatiquement NestJS et déploie depuis le sous-dossier.
+  # Nécessite : secret RAILWAY_TOKEN
   # ─────────────────────────────────────────────────────────────────
-  docker:
-    name: Docker — Build & Push GHCR
-    needs: check
-    if: needs.check.outputs.should_deploy == 'true'
+  deploy-backend:
+    name: Deploy Backend → Railway
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write  # nécessaire pour push sur ghcr.io
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # ── Image Backend ──
-      - name: Build & push — backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend-projet/library-management
-          push: true
-          # Tag : latest + sha court pour le rollback
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/exocraft-backend:latest
-            ghcr.io/${{ github.repository_owner }}/exocraft-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # ── Image Frontend ──
-      - name: Build & push — frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend-projet/frontend
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/exocraft-frontend:latest
-            ghcr.io/${{ github.repository_owner }}/exocraft-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # ─────────────────────────────────────────────────────────────────
-  # JOB 2 — Déploiement sur le serveur via SSH
-  # (Nécessite les secrets : DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY)
-  # ─────────────────────────────────────────────────────────────────
-  deploy:
-    name: Deploy — Serveur production
-    needs: docker
-    runs-on: ubuntu-latest
-
-    # ⚠️  Désactiver ce job si vous n'avez pas encore de serveur :
-    # remplacer "if: true" par "if: false" ou supprimer ce job
-    if: >
-      vars.DEPLOY_ENABLED == 'true' &&
-      secrets.DEPLOY_HOST != ''
 
     environment:
-      name: production
-      url: http://${{ secrets.DEPLOY_HOST }}
+      name: production-backend
+      url: ${{ steps.deploy.outputs.url }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Déploiement via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        id: deploy
+        working-directory: backend-projet/library-management
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          # Déploie le service backend sur Railway
+          # Railway utilise le Dockerfile existant dans ce dossier
+          railway up --service backend --detach
+          echo "✅ Backend déployé sur Railway"
+
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 2 — Frontend → Vercel
+  # Nécessite : secrets VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+  # ─────────────────────────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend → Vercel
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production-frontend
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
         with:
-          host:     ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key:      ${{ secrets.DEPLOY_SSH_KEY }}
-          port:     ${{ secrets.DEPLOY_PORT || '22' }}
-          script: |
-            set -e
-            cd /opt/exocraft
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend-projet/frontend/package-lock.json
 
-            # Connexion GHCR sur le serveur
-            echo "${{ secrets.GHCR_TOKEN }}" | \
-              docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Install dependencies
+        working-directory: frontend-projet/frontend
+        run: npm ci
 
-            # Mettre à jour le docker-compose.yml avec les nouvelles images
-            export BACKEND_IMAGE="ghcr.io/${{ github.repository_owner }}/exocraft-backend:${{ github.sha }}"
-            export FRONTEND_IMAGE="ghcr.io/${{ github.repository_owner }}/exocraft-frontend:${{ github.sha }}"
+      - name: Build Vite (prod)
+        working-directory: frontend-projet/frontend
+        run: npm run build
+        env:
+          # URL du backend Railway — à renseigner dans les Variables GitHub
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
 
-            # Pull et redémarrage sans downtime (rolling)
-            docker compose pull
-            docker compose up -d --remove-orphans
+      - name: Install Vercel CLI
+        run: npm install -g vercel
 
-            # Nettoyage des images obsolètes
-            docker image prune -f
+      - name: Deploy to Vercel
+        id: deploy
+        working-directory: frontend-projet/frontend
+        env:
+          VERCEL_TOKEN:      ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID:     ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          # --prod = déploiement en production (pas preview)
+          URL=$(vercel deploy --prod --yes \
+            --token "$VERCEL_TOKEN" \
+            --local-config vercel.json 2>/dev/null || \
+            vercel deploy --prod --yes --token "$VERCEL_TOKEN")
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Frontend déployé : $URL"
 
-            echo "✅ Déploiement ${{ github.sha }} terminé"
+  # ─────────────────────────────────────────────────────────────────
+  # JOB 3 — Résumé du déploiement
+  # ─────────────────────────────────────────────────────────────────
+  deploy-summary:
+    name: Résumé déploiement
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Résultat
+        run: |
+          echo "Backend  Railway : ${{ needs.deploy-backend.result }}"
+          echo "Frontend Vercel  : ${{ needs.deploy-frontend.result }}"
