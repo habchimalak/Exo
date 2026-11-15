@@ -1,9 +1,13 @@
 // ─── Base URL ────────────────────────────────────────────────────────────────
 // En dev  : proxy Vite → localhost:3000  →  chemin relatif /api
-// En prod : VITE_API_URL défini dans Vercel → https://xxxx.up.railway.app/api
-const API_URL = import.meta.env.VITE_API_URL
+// En prod : URL Railway codée en dur (Vercel ne peut pas proxifier vers Railway)
+const RAILWAY_URL = "https://exo-production-bdb515ba.up.railway.app";
+
+const API_URL = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL)
   ? `${import.meta.env.VITE_API_URL}/api`
-  : "/api";
+  : (typeof import.meta !== "undefined" && import.meta.env?.MODE === "production")
+    ? `${RAILWAY_URL}/api`
+    : "/api";
 
 // ─── Token JWT ───────────────────────────────────────────────────────────────
 function getToken() {

@@ -3,7 +3,12 @@
  * Converti en JS pur, API_BASE en chemin relatif /api
  */
 
-const API_BASE = '/api'
+const RAILWAY_URL = "https://exo-production-bdb515ba.up.railway.app";
+const API_BASE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL)
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : (typeof import.meta !== "undefined" && import.meta.env?.MODE === "production")
+    ? `${RAILWAY_URL}/api`
+    : '/api';
 
 // ── Token helpers ──────────────────────────────────────────────────────────
 export function getToken() {
