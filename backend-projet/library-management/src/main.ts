@@ -12,19 +12,21 @@ async function bootstrap() {
 
   // En prod (Docker/nginx), le frontend est servi sur la même origine que l'API.
   // On autorise les origines localhost pour le dev, et l'origine de FRONTEND_URL pour la prod.
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:4173',
-    process.env.FRONTEND_URL,
-  ].filter(Boolean) as string[];
-
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Requêtes sans origine (curl, Postman, même domaine nginx) → autorisées
+      // Pas d'origine (curl, Postman, Railway interne) → autorisé
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS bloqué pour l'origine : ${origin}`));
+
+      const allowed =
+        // Dev local
+        origin.startsWith('http://localhost') ||
+        // Vercel (tous les sous-domaines : preview + production)
+        origin.endsWith('.vercel.app') ||
+        // URL custom définie dans FRONTEND_URL
+        (!!process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL);
+
+      if (allowed) return callback(null, true);
+      callback(new Error(`CORS bloqué : ${origin}`));
     },
     credentials: true,
   });
