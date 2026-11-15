@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { authApi } from "../services/api";
 import logo from "../assets/exocraft-logo.png";
 import {
   validateEmail, validatePassword, validatePasswordStrength,
-  validateConfirmPassword, validateName, validateOtp, runValidation,
+  validateConfirmPassword, validateName, runValidation,
 } from "../utils/validators";
 
 /* ─── Indicateur de force du mot de passe ──────────────────────── */
@@ -34,102 +33,25 @@ function PasswordStrength({ password }) {
   );
 }
 
-/* ─── Champ de saisie du code OTP ──────────────────────────────── */
-function OtpInput({ value, onChange, error }) {
-  const inputs = useRef([]);
-
-  const handleChange = (i, e) => {
-    const val = e.target.value.replace(/\D/, "");
-    const chars = value.split("");
-    chars[i] = val;
-    onChange(chars.join(""));
-    if (val && i < 5) inputs.current[i + 1]?.focus();
-  };
-
-  const handleKeyDown = (i, e) => {
-    if (e.key === "Backspace" && !value[i] && i > 0) inputs.current[i - 1]?.focus();
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    onChange(pasted.padEnd(6, ""));
-    inputs.current[Math.min(pasted.length, 5)]?.focus();
-  };
-
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 10, justifyContent: "center", margin: "8px 0" }}>
-        {[0, 1, 2, 3, 4, 5].map(i => (
-          <input
-            key={i}
-            ref={el => { inputs.current[i] = el; }}
-            type="text"
-            inputMode="numeric"
-            maxLength={1}
-            value={value[i] || ""}
-            onChange={e => handleChange(i, e)}
-            onKeyDown={e => handleKeyDown(i, e)}
-            onPaste={handlePaste}
-            style={{
-              width: 48, height: 56, textAlign: "center",
-              fontSize: 22, fontWeight: 800,
-              border: `2px solid ${error ? "#EF4444" : value[i] ? "#2563EB" : "#D1D5DB"}`,
-              borderRadius: 12,
-              background: value[i] ? "#EFF6FF" : "#fff",
-              color: "#1a1a3e", outline: "none",
-              transition: "border-color 0.2s, background 0.2s",
-            }}
-          />
-        ))}
-      </div>
-      {error && (
-        <p role="alert" style={{ color: "#EF4444", fontSize: 12, textAlign: "center", margin: "4px 0 0" }}>
-          ⚠ {error}
-        </p>
-      )}
-    </div>
-  );
-}
-
 /* ─── Page principale ───────────────────────────────────────────── */
 export default function Register() {
   const navigate = useNavigate();
   const { register } = useAuth();
 
-  // Étapes : "form" → "otp" → (register réussi → "/dashboard")
-  const [step, setStep] = useState("form");
-
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", password: "", confirmPassword: "",
   });
-  const [errors,  setErrors]  = useState({});
-  const [loading, setLoading] = useState(false);
+  const [errors,      setErrors]      = useState({});
+  const [loading,     setLoading]     = useState(false);
   const [globalError, setGlobalError] = useState("");
-
-  // OTP
-  const [otpCode,     setOtpCode]     = useState("");
-  const [otpError,    setOtpError]    = useState("");
-  const [otpLoading,  setOtpLoading]  = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-  const timerRef = useRef(null);
-
-  useEffect(() => {
-    if (resendTimer > 0) {
-      timerRef.current = setTimeout(() => setResendTimer(t => t - 1), 1000);
-    }
-    return () => clearTimeout(timerRef.current);
-  }, [resendTimer]);
 
   const update = (e) => {
     const { name, value } = e.target;
     setForm(cur => ({ ...cur, [name]: value }));
-    // Effacer l'erreur du champ modifié
     if (errors[name]) setErrors(cur => ({ ...cur, [name]: null }));
   };
 
-  /* ── Étape 1 : validation du formulaire + envoi OTP (si SMTP dispo) ── */
-  const handleSubmitForm = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setGlobalError("");
 
@@ -148,65 +70,6 @@ export default function Register() {
 
     setLoading(true);
     try {
-      // Essayer d'envoyer un OTP
-      await authApi.sendOtp(form.email.trim());
-      // Si ça marche → étape OTP
-      setStep("otp");
-      setResendTimer(60);
-    } catch (err) {
-      // Si SMTP non configuré (erreur serveur) → inscription directe
-      if (err.message?.includes("nodemailer") || err.message?.includes("SMTP") || err.message?.includes("ECONNREFUSED") || err.message?.includes("535") || err.message?.includes("mail")) {
-        // Inscription directe sans OTP
-        try {
-          await register({
-            firstName:    form.firstName.trim(),
-            lastName:     form.lastName.trim(),
-            email:        form.email.trim(),
-            password:     form.password,
-            associations: [],
-          });
-          navigate("/dashboard");
-        } catch (regErr) {
-          setGlobalError(regErr.message || "Une erreur est survenue lors de l'inscription.");
-        }
-      } else {
-        setGlobalError(err.message || "Impossible d'envoyer le code. Réessayez.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ── Renvoyer le code OTP ── */
-  const handleResend = async () => {
-    if (resendTimer > 0) return;
-    setOtpError("");
-    setOtpLoading(true);
-    try {
-      await authApi.sendOtp(form.email.trim());
-      setResendTimer(60);
-      setOtpCode("");
-    } catch (err) {
-      setOtpError(err.message || "Impossible de renvoyer le code.");
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  /* ── Étape 2 : vérification OTP + inscription ── */
-  const handleVerifyAndRegister = async (e) => {
-    e.preventDefault();
-    setOtpError("");
-
-    const otpErr = validateOtp(otpCode);
-    if (otpErr) { setOtpError(otpErr); return; }
-
-    setOtpLoading(true);
-    try {
-      // 1. Vérifier le code
-      await authApi.verifyOtp(form.email.trim(), otpCode.trim());
-
-      // 2. Créer le compte
       await register({
         firstName:    form.firstName.trim(),
         lastName:     form.lastName.trim(),
@@ -216,92 +79,12 @@ export default function Register() {
       });
       navigate("/dashboard");
     } catch (err) {
-      setOtpError(err.message || "Code incorrect ou expiré.");
+      setGlobalError(err.message || "Une erreur est survenue lors de l'inscription.");
     } finally {
-      setOtpLoading(false);
+      setLoading(false);
     }
   };
 
-  /* ══════════════════ RENDU ══════════════════ */
-
-  /* ── Étape OTP ── */
-  if (step === "otp") {
-    return (
-      <div className="auth-page">
-        <header className="auth-header">
-          <Link to="/" className="auth-logo-link">
-            <img src={logo} alt="ExoCraft" className="auth-logo" />
-          </Link>
-        </header>
-
-        <main className="auth-main">
-          <div className="auth-container">
-            <div className="auth-heading">
-              <span className="auth-eyebrow">VÉRIFICATION EMAIL</span>
-              <h1>Vérifiez votre email</h1>
-              <p>
-                Un code à 6 chiffres a été envoyé à <strong>{form.email}</strong>.
-                Saisissez-le ci-dessous pour confirmer votre inscription.
-              </p>
-            </div>
-
-            <form onSubmit={handleVerifyAndRegister} className="auth-form">
-              <OtpInput value={otpCode} onChange={setOtpCode} error={otpError} />
-
-              {/* Timer + renvoi */}
-              <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "var(--text-muted, #9ca3af)" }}>
-                {resendTimer > 0 ? (
-                  <span>Renvoyer dans <strong style={{ color: "#2563EB" }}>{resendTimer}s</strong></span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={otpLoading}
-                    style={{
-                      background: "none", border: "none", cursor: "pointer",
-                      color: "#2563EB", fontWeight: 600, fontSize: 13, padding: 0,
-                    }}
-                  >
-                    {otpLoading ? "Envoi…" : "Renvoyer le code"}
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                className="auth-button"
-                disabled={otpLoading || otpCode.length < 6}
-                style={{ marginTop: 24 }}
-              >
-                <span>{otpLoading ? "Vérification…" : "Confirmer et créer mon compte"}</span>
-                {!otpLoading && <span>→</span>}
-              </button>
-            </form>
-
-            <div style={{ textAlign: "center", marginTop: 16 }}>
-              <button
-                type="button"
-                onClick={() => { setStep("form"); setOtpCode(""); setOtpError(""); }}
-                style={{
-                  background: "none", border: "none", cursor: "pointer",
-                  color: "var(--text-muted, #9ca3af)", fontSize: 13,
-                }}
-              >
-                ← Modifier mon email
-              </button>
-            </div>
-
-            <div className="auth-security">
-              <span>🔒</span>
-              <p>Code valable 10 minutes · 5 tentatives maximum.</p>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  /* ── Étape formulaire ── */
   return (
     <div className="auth-page">
       <header className="auth-header">
@@ -320,10 +103,10 @@ export default function Register() {
           <div className="auth-heading">
             <span className="auth-eyebrow">CRÉER VOTRE ESPACE ENSEIGNANT</span>
             <h1>Rejoignez ExoCraft</h1>
-            <p>Créez votre compte. Un code de vérification sera envoyé à votre email.</p>
+            <p>Créez votre compte en quelques secondes.</p>
           </div>
 
-          <form className="auth-form" onSubmit={handleSubmitForm} noValidate>
+          <form className="auth-form" onSubmit={handleSubmit} noValidate>
 
             {/* Prénom + Nom */}
             <div className="registration-name-grid">
@@ -337,7 +120,9 @@ export default function Register() {
                   style={{ borderColor: errors.firstName ? "#EF4444" : undefined }}
                 />
                 {errors.firstName && (
-                  <p className="auth-field-error" role="alert">⚠ {errors.firstName}</p>
+                  <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
+                    ⚠ {errors.firstName}
+                  </p>
                 )}
               </div>
               <div className="form-group">
@@ -350,7 +135,9 @@ export default function Register() {
                   style={{ borderColor: errors.lastName ? "#EF4444" : undefined }}
                 />
                 {errors.lastName && (
-                  <p className="auth-field-error" role="alert">⚠ {errors.lastName}</p>
+                  <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
+                    ⚠ {errors.lastName}
+                  </p>
                 )}
               </div>
             </div>
@@ -367,7 +154,9 @@ export default function Register() {
                 style={{ borderColor: errors.email ? "#EF4444" : undefined }}
               />
               {errors.email && (
-                <p className="auth-field-error" role="alert">⚠ {errors.email}</p>
+                <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
+                  ⚠ {errors.email}
+                </p>
               )}
             </div>
 
@@ -382,7 +171,9 @@ export default function Register() {
                 style={{ borderColor: errors.password ? "#EF4444" : undefined }}
               />
               {errors.password && (
-                <p className="auth-field-error" role="alert">⚠ {errors.password}</p>
+                <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
+                  ⚠ {errors.password}
+                </p>
               )}
               <PasswordStrength password={form.password} />
             </div>
@@ -399,7 +190,9 @@ export default function Register() {
                 style={{ borderColor: errors.confirmPassword ? "#EF4444" : undefined }}
               />
               {errors.confirmPassword && (
-                <p className="auth-field-error" role="alert">⚠ {errors.confirmPassword}</p>
+                <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
+                  ⚠ {errors.confirmPassword}
+                </p>
               )}
             </div>
 
@@ -408,7 +201,8 @@ export default function Register() {
             )}
 
             <button type="submit" className="auth-button" disabled={loading}>
-              <span>{loading ? "Envoi du code…" : "Continuer →"}</span>
+              <span>{loading ? "Création en cours..." : "Créer mon compte"}</span>
+              {!loading && <span>→</span>}
             </button>
 
           </form>
@@ -420,7 +214,7 @@ export default function Register() {
 
           <div className="auth-security">
             <span>🔒</span>
-            <p>Un code de vérification sera envoyé à votre adresse email.</p>
+            <p>Vos informations de compte sont protégées.</p>
           </div>
 
         </div>
