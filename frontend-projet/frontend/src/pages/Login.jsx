@@ -12,6 +12,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
+  const [showPwd, setShowPwd]   = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -78,15 +79,32 @@ function Login() {
 
             <div className="form-group">
               <label htmlFor="password">Mot de passe</label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                placeholder="Votre mot de passe"
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                required
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  id="password"
+                  value={password}
+                  placeholder="Votre mot de passe"
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  required
+                  style={{ paddingRight: 44, width: "100%", boxSizing: "border-box" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  style={{
+                    position: "absolute", right: 12, top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: 4, color: "var(--text-muted, #9ca3af)",
+                    fontSize: 18, lineHeight: 1,
+                  }}
+                  aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                >
+                  {showPwd ? "🙈" : "👁"}
+                </button>
+              </div>
               <button
                 type="button"
                 className="forgot-password"

@@ -44,6 +44,8 @@ export default function Register() {
   const [errors,      setErrors]      = useState({});
   const [loading,     setLoading]     = useState(false);
   const [globalError, setGlobalError] = useState("");
+  const [showPwd,     setShowPwd]     = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const update = (e) => {
     const { name, value } = e.target;
@@ -165,11 +167,28 @@ export default function Register() {
               <label htmlFor="password">
                 Mot de passe <span style={{ color: "#EF4444" }}>*</span>
               </label>
-              <input
-                type="password" id="password" name="password" value={form.password}
-                onChange={update} autoComplete="new-password"
-                style={{ borderColor: errors.password ? "#EF4444" : undefined }}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showPwd ? "text" : "password"}
+                  id="password" name="password" value={form.password}
+                  onChange={update} autoComplete="new-password"
+                  style={{ borderColor: errors.password ? "#EF4444" : undefined, paddingRight: 44, width: "100%", boxSizing: "border-box" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd(v => !v)}
+                  style={{
+                    position: "absolute", right: 12, top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: 4, color: "var(--text-muted, #9ca3af)",
+                    fontSize: 18, lineHeight: 1,
+                  }}
+                  aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                >
+                  {showPwd ? "🙈" : "👁"}
+                </button>
+              </div>
               {errors.password && (
                 <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
                   ⚠ {errors.password}
@@ -183,12 +202,29 @@ export default function Register() {
               <label htmlFor="confirmPassword">
                 Confirmer le mot de passe <span style={{ color: "#EF4444" }}>*</span>
               </label>
-              <input
-                type="password" id="confirmPassword" name="confirmPassword"
-                value={form.confirmPassword} onChange={update}
-                autoComplete="new-password"
-                style={{ borderColor: errors.confirmPassword ? "#EF4444" : undefined }}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  id="confirmPassword" name="confirmPassword"
+                  value={form.confirmPassword} onChange={update}
+                  autoComplete="new-password"
+                  style={{ borderColor: errors.confirmPassword ? "#EF4444" : undefined, paddingRight: 44, width: "100%", boxSizing: "border-box" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(v => !v)}
+                  style={{
+                    position: "absolute", right: 12, top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: 4, color: "var(--text-muted, #9ca3af)",
+                    fontSize: 18, lineHeight: 1,
+                  }}
+                  aria-label={showConfirm ? "Masquer" : "Afficher"}
+                >
+                  {showConfirm ? "🙈" : "👁"}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p style={{ color:"#EF4444", fontSize:12, margin:"4px 0 0" }} role="alert">
                   ⚠ {errors.confirmPassword}
