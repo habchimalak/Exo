@@ -465,19 +465,19 @@ function Navbar({ onLogin, onRegister }) {
       <header style={{
         position: "sticky", top: scrolled ? 8 : 0, zIndex: 100,
         display: "flex", justifyContent: "center",
-        padding: `${scrolled ? 8 : 6}px clamp(16px,4vw,40px)`,
+        padding: scrolled ? `8px clamp(16px,4vw,40px)` : `0px`,
         transition: "all 0.35s cubic-bezier(.22,1,.36,1)",
       }}>
         <nav style={{
-          width: "100%", maxWidth: 1100,
+          width: "100%", maxWidth: scrolled ? 1200 : "100%",
           display: "flex", alignItems: "center", gap: 8,
           height: scrolled ? 60 : 68,
-          padding: "0 24px",
+          padding: scrolled ? "0 24px" : "0 clamp(16px,5vw,60px)",
           background: "var(--home-nav-bg)",
           border: "1px solid var(--home-nav-border)",
-          borderRadius: "var(--r-lg)",
+          borderRadius: scrolled ? "var(--r-lg)" : 0,
           backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
-          boxShadow: scrolled ? "var(--shadow-2)" : "var(--shadow-1)",
+          boxShadow: scrolled ? "var(--shadow-2)" : "none",
           transition: "all 0.35s cubic-bezier(.22,1,.36,1)",
         }}>
           {/* Logo */}
