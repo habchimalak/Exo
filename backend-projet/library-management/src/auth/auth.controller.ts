@@ -56,20 +56,22 @@ export class AuthController {
     return { message: 'Email vérifié avec succès.' };
   }
 
-  // ── POST /auth/register — inscription (email doit être vérifié) ──
+  // ── POST /auth/register — inscription directe (OTP désactivé si MAIL non configuré) ──
   @Public()
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto) {
-    // Vérifier que l'OTP a été validé avant d'autoriser l'inscription
     const email = createUserDto.email;
-    if (!this.otpService.isVerified(email)) {
+    const mailConfigured = !!(process.env.MAIL_USER && process.env.MAIL_PASS);
+
+    // Si le mail est configuré → vérifier l'OTP
+    if (mailConfigured && !this.otpService.isVerified(email)) {
       throw new UnauthorizedException(
         'Votre adresse email n\'a pas été vérifiée. Veuillez saisir le code reçu par email.',
       );
     }
+
     const result = await this.authService.register(createUserDto);
-    // Consommer le token OTP après inscription réussie
-    this.otpService.consume(email);
+    if (mailConfigured) this.otpService.consume(email);
     return result;
   }
 

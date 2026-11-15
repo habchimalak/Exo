@@ -128,7 +128,7 @@ export default function Register() {
     if (errors[name]) setErrors(cur => ({ ...cur, [name]: null }));
   };
 
-  /* ── Étape 1 : validation du formulaire + envoi OTP ── */
+  /* ── Étape 1 : validation du formulaire + envoi OTP (si SMTP dispo) ── */
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     setGlobalError("");
@@ -148,11 +148,30 @@ export default function Register() {
 
     setLoading(true);
     try {
+      // Essayer d'envoyer un OTP
       await authApi.sendOtp(form.email.trim());
+      // Si ça marche → étape OTP
       setStep("otp");
       setResendTimer(60);
     } catch (err) {
-      setGlobalError(err.message || "Impossible d'envoyer le code. Réessayez.");
+      // Si SMTP non configuré (erreur serveur) → inscription directe
+      if (err.message?.includes("nodemailer") || err.message?.includes("SMTP") || err.message?.includes("ECONNREFUSED") || err.message?.includes("535") || err.message?.includes("mail")) {
+        // Inscription directe sans OTP
+        try {
+          await register({
+            firstName:    form.firstName.trim(),
+            lastName:     form.lastName.trim(),
+            email:        form.email.trim(),
+            password:     form.password,
+            associations: [],
+          });
+          navigate("/dashboard");
+        } catch (regErr) {
+          setGlobalError(regErr.message || "Une erreur est survenue lors de l'inscription.");
+        }
+      } else {
+        setGlobalError(err.message || "Impossible d'envoyer le code. Réessayez.");
+      }
     } finally {
       setLoading(false);
     }
